@@ -20,15 +20,15 @@ jobs:
           cache: 'npm'
 
       - name: Install backend dependencies
-        run: npm ci
+        run: npm install
         working-directory: backend
 
       - name: Install customer frontend dependencies
-        run: npm ci
+        run: npm install
         working-directory: frontend-customer
 
       - name: Install admin frontend dependencies
-        run: npm ci
+        run: npm install
         working-directory: frontend-admin
 
       - name: Backend syntax check
