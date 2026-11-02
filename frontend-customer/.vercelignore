@@ -1,0 +1,11 @@
+# Vercel deployment exclusions for frontend-customer
+node_modules/
+dist/
+.env
+.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.DS_Store
+.vercel

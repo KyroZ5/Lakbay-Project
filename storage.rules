@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (request.auth.token.role == 'admin');
+    }
+
+    function isStaff() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'coordinator' || 
+        request.auth.token.role == 'support' || 
+        request.auth.token.role == 'guide' || 
+        request.auth.token.role == 'operator' ||
+        request.auth.token.role == 'admin'
+      );
+    }
+
+    // Public catalog images (destinations, packages, promotions)
+    match /catalog/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff() && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Destination images
+    match /destinations/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff() && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Tour package images
+    match /packages/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff() && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Promotional banners
+    match /promotions/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff() && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // User profile avatars
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Default rule
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

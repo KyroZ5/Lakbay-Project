@@ -1,0 +1,15 @@
+# Vercel deployment exclusions for backend
+node_modules/
+dist/
+.env
+.env.example
+serviceAccountKey.json
+*.log
+npm-debug.log*
+.yarn-integrity
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.DS_Store
+.vercel

@@ -1,0 +1,163 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------
+    // Helper Functions
+    // ----------------------------------------------------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Role check from user token custom claims or Firestore users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role != null 
+        ? request.auth.token.role 
+        : (isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? getUserData().role : 'guest');
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (request.auth.token.role == 'admin' || getUserRole() == 'admin');
+    }
+
+    function isCoordinator() {
+      return isAuthenticated() && (getUserRole() == 'coordinator' || isAdmin());
+    }
+
+    function isSupport() {
+      return isAuthenticated() && (getUserRole() == 'support' || isAdmin());
+    }
+
+    function isGuide() {
+      return isAuthenticated() && (getUserRole() == 'guide' || isAdmin());
+    }
+
+    function isStaff() {
+      return isAuthenticated() && (
+        getUserRole() == 'coordinator' || 
+        getUserRole() == 'support' || 
+        getUserRole() == 'guide' || 
+        getUserRole() == 'admin'
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ----------------------------------------------------
+    // 1. Users Collection
+    // ----------------------------------------------------
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isStaff();
+      
+      // Public registration: allow user to create their own profile with customer role only
+      allow create: if isOwner(userId) 
+        && request.resource.data.role == 'customer'
+        && request.resource.data.accountStatus == 'active';
+
+      // Updates: owner can update profile fields, but cannot modify role or accountStatus
+      allow update: if (isOwner(userId) 
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.accountStatus == resource.data.accountStatus)
+        || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // 2. Co-Travelers Collection
+    // ----------------------------------------------------
+    match /coTravelers/{coTravelerId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isStaff());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ----------------------------------------------------
+    // 3. Destinations Collection
+    // ----------------------------------------------------
+    match /destinations/{destinationId} {
+      allow read: if resource.data.isPublished == true || isStaff();
+      allow create, update, delete: if isCoordinator() || isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // 4. Tour Packages Collection
+    // ----------------------------------------------------
+    match /tourPackages/{packageId} {
+      allow read: if resource.data.isPublished == true || isStaff();
+      allow create, update, delete: if isCoordinator() || isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // 5. Departures Collection
+    // ----------------------------------------------------
+    match /departures/{departureId} {
+      allow read: if resource.data.status == 'open' || isStaff();
+      allow create: if isCoordinator() || isAdmin();
+      // Tour guides can update departures assigned to them (check-in / complete)
+      allow update: if isCoordinator() || isAdmin() || (isGuide() && resource.data.assignedGuideId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // 6. Bookings Collection
+    // Transactions and mutations are handled securely by /backend
+    // ----------------------------------------------------
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() && (
+        resource.data.customerId == request.auth.uid || 
+        isSupport() || 
+        isAdmin() || 
+        (isGuide() && resource.data.assignedGuideId == request.auth.uid)
+      );
+      // Client writes disabled; booking creation/cancellation flows through /backend
+      allow write: if false;
+    }
+
+    // ----------------------------------------------------
+    // 7. Payments Collection
+    // Handled exclusively by Stripe webhooks and /backend
+    // ----------------------------------------------------
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.customerId == request.auth.uid || 
+        isSupport() || 
+        isAdmin()
+      );
+      allow write: if false;
+    }
+
+    // ----------------------------------------------------
+    // 8. Notifications Collection
+    // ----------------------------------------------------
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid 
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow create, delete: if isStaff();
+    }
+
+    // ----------------------------------------------------
+    // 9. Promotions Collection
+    // ----------------------------------------------------
+    match /promotions/{promotionId} {
+      allow read: if resource.data.isActive == true || isStaff();
+      allow create, update, delete: if isCoordinator() || isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // 10. Activity Logs Collection
+    // ----------------------------------------------------
+    match /activityLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only written via Admin SDK
+    }
+  }
+}

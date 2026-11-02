@@ -1,0 +1,91 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lakbay-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=5000
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+      - ADMIN_URL=${ADMIN_URL:-http://localhost:3001}
+      - FIREBASE_SERVICE_ACCOUNT_PATH=${FIREBASE_SERVICE_ACCOUNT_PATH:-./serviceAccountKey.json}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL:-}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY:-}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_CURRENCY=${STRIPE_CURRENCY:-php}
+      - GEOAPIFY_API_KEY=${GEOAPIFY_API_KEY:-}
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@lakbay.ph}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-AdminPassword123}
+      - ADMIN_NAME=${ADMIN_NAME:-Lakbay Administrator}
+      - ADMIN_PHONE=${ADMIN_PHONE:-+639171234567}
+      - TZ=Asia/Manila
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - lakbay-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend-customer:
+    build:
+      context: ./frontend-customer
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
+        - VITE_ADMIN_URL=${VITE_ADMIN_URL:-http://localhost:5174}
+        - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-}
+        - VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN:-}
+        - VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID:-}
+        - VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET:-}
+        - VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
+        - VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID:-}
+    container_name: lakbay-frontend-customer
+    restart: unless-stopped
+    ports:
+      - "${CUSTOMER_WEB_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - lakbay-net
+
+  frontend-admin:
+    build:
+      context: ./frontend-admin
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
+        - VITE_ENABLE_DEMO_LOGIN=${VITE_ENABLE_DEMO_LOGIN:-false}
+        - VITE_ADMIN_URL=${VITE_ADMIN_URL:-http://localhost:5174}
+        - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-}
+        - VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN:-}
+        - VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID:-}
+        - VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET:-}
+        - VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
+        - VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID:-}
+    container_name: lakbay-frontend-admin
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_PORT:-3001}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - lakbay-net
+
+networks:
+  lakbay-net:
+    driver: bridge

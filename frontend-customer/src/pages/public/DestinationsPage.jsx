@@ -1,0 +1,275 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { destinationsApi } from '../../api/destinationsApi';
+import { Card, CardContent } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { EmptyState, ErrorState } from '../../components/common/DataStates';
+import { LoadingRegion } from '../../components/common/Skeletons';
+import { getErrorMessage } from '../../lib/notify';
+import { MapPin, Search, ArrowRight } from 'lucide-react';
+
+const DestinationCardSkeleton = () => (
+  <div className="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-hidden="true">
+    <div>
+      <Skeleton className="h-60 w-full rounded-none" />
+      <div className="p-6">
+        <Skeleton className="h-3 w-32 mb-2" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="mt-3 h-3 w-full" />
+        <Skeleton className="mt-1.5 h-3 w-full" />
+        <Skeleton className="mt-1.5 h-3 w-4/5" />
+        <div className="mt-4 flex gap-1.5">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-5 w-14" />
+        </div>
+      </div>
+    </div>
+    <div className="p-6 pt-4 border-t border-slate-100 mt-4 flex items-center justify-between">
+      <Skeleton className="h-3 w-20" />
+      <Skeleton className="h-8 w-32" />
+    </div>
+  </div>
+);
+
+export const DestinationsPage = () => {
+  const [destinations, setDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState('');
+
+  const fetchDestinations = async (overrides = {}) => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = {};
+      const searchTerm = overrides.search ?? search;
+      if (searchTerm) params.search = searchTerm;
+      if (category) params.category = category;
+      if (sort) params.sort = sort;
+
+      const res = await destinationsApi.getAll(params);
+      setDestinations(res.data || []);
+    } catch (err) {
+      console.error('Failed to load destinations:', err);
+      setError(getErrorMessage(err, 'Failed to load destinations.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDestinations();
+  }, [category, sort]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchDestinations();
+  };
+
+  const handleClearFilters = () => {
+    setSearch('');
+    if (category) {
+      // The category effect refetches once the cleared state applies
+      setCategory('');
+    } else {
+      fetchDestinations({ search: '' });
+    }
+  };
+
+  const categories = ['All', 'Island', 'Beach', 'Heritage', 'Nature', 'Mountain'];
+  const hasActiveFilters = Boolean(search || category);
+  // Skeleton only when there are no cards yet; refreshes keep the current cards visible
+  const showSkeleton = loading && destinations.length === 0;
+
+  return (
+    <div className="min-h-screen bg-slate-50 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="max-w-3xl mb-10">
+          <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
+            Archipelago Catalog
+          </Badge>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 font-heading">
+            Explore Philippine Destinations
+          </h1>
+          <p className="mt-3 text-slate-600 text-base">
+            Discover tropical archipelagos, coastal sanctuaries, historical towns, and highland ridges across Luzon, Visayas, and Mindanao.
+          </p>
+        </div>
+
+        {/* Search & Filter Toolbar */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm mb-10">
+          <div className="flex flex-col md:flex-row items-center gap-4 justify-between">
+            {/* Search Input */}
+            <form onSubmit={handleSearchSubmit} className="relative w-full md:w-96">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search destination, island, or region..."
+                aria-label="Search destinations"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </form>
+
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              {categories.map((cat) => {
+                const isActive = (cat === 'All' && !category) || category === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat === 'All' ? '' : cat)}
+                    aria-pressed={isActive}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+                      isActive
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sort Select */}
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <span id="destinations-sort-label" className="text-xs font-semibold text-slate-400 uppercase tracking-wider shrink-0">
+                Sort:
+              </span>
+              <Select
+                value={sort || 'featured'}
+                onValueChange={(v) => setSort(v === 'featured' ? '' : v)}
+              >
+                <SelectTrigger
+                  aria-labelledby="destinations-sort-label"
+                  className="h-8 w-auto min-w-[9.5rem] gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="featured">Featured First</SelectItem>
+                  <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+                  <SelectItem value="name_desc">Name (Z-A)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Destination Cards Grid */}
+        {error && (
+          <ErrorState className="mb-8" message={error} onRetry={fetchDestinations} retrying={loading} />
+        )}
+
+        {showSkeleton ? (
+          <LoadingRegion label="Loading destinations" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <DestinationCardSkeleton key={i} />
+            ))}
+          </LoadingRegion>
+        ) : destinations.length === 0 ? (
+          error ? null : (
+            <div className="rounded-2xl border border-slate-200 bg-white">
+              {hasActiveFilters ? (
+                <EmptyState
+                  filtered
+                  onClearFilters={handleClearFilters}
+                  title="No destinations found"
+                  description="Try adjusting your search terms or category filters."
+                />
+              ) : (
+                <EmptyState
+                  icon={MapPin}
+                  title="No destinations available yet"
+                  description="Our destination catalog is being prepared. Check back soon or browse our tour packages."
+                  action={
+                    <Button asChild size="sm">
+                      <Link to="/packages">
+                        Browse Tour Packages
+                        <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          )
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" aria-busy={loading}>
+            {destinations.map((dest) => (
+              <Card
+                key={dest.id}
+                className="group overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="relative h-60 overflow-hidden">
+                    <img
+                      src={dest.imageUrls?.[0] || 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=800&q=80'}
+                      alt={dest.name}
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <Badge className="bg-emerald-600/90 text-white font-bold text-xs backdrop-blur-sm">
+                        {dest.category || 'Island'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-6">
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {dest.location}
+                    </p>
+                    <h3 className="text-xl font-bold text-slate-900 font-heading group-hover:text-emerald-700 transition-colors">
+                      {dest.name}
+                    </h3>
+                    <p className="mt-2 text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                      {dest.description}
+                    </p>
+
+                    {/* Recommended Activities tags */}
+                    {dest.recommendedActivities && dest.recommendedActivities.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-1.5">
+                        {dest.recommendedActivities.slice(0, 3).map((act, i) => (
+                          <span
+                            key={i}
+                            className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                          >
+                            {act}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </div>
+
+                <div className="p-6 pt-0 border-t border-slate-100 mt-4 flex items-center justify-between">
+                  <span className="text-xs text-slate-500 font-medium">
+                    {dest.region || 'Philippines'}
+                  </span>
+                  <Button asChild size="sm" className="bg-slate-900 hover:bg-emerald-600 text-white font-semibold text-xs">
+                    <Link to={`/destinations/${dest.id}`}>
+                      Explore Details
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
