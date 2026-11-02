@@ -32,7 +32,7 @@ jobs:
         working-directory: frontend-admin
 
       - name: Backend syntax check
-        run: node --check src/**/*.js
+        run: find src -name '*.js' -exec node --check {} +
         working-directory: backend
 
       - name: Build customer frontend
