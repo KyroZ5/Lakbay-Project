@@ -972,7 +972,7 @@ export const PackagesManagePage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="pkg-price" className="text-xs font-semibold">
                   Price per Person (PHP) *
@@ -991,16 +991,9 @@ export const PackagesManagePage = () => {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-x-2">
-                  <Label htmlFor="pkg-discount" className="text-xs font-semibold">
-                    Discount (%)
-                  </Label>
-                  {Number(formData.discountPercent) > 0 && Number(formData.pricePerPerson) > 0 && (
-                    <span className="text-[10px] font-bold text-emerald-600">
-                      Pays {formatPHP(Math.round(Number(formData.pricePerPerson) * (1 - Number(formData.discountPercent) / 100)))}
-                    </span>
-                  )}
-                </div>
+                <Label htmlFor="pkg-discount" className="text-xs font-semibold">
+                  Discount (%)
+                </Label>
                 <Input
                   id="pkg-discount"
                   type="number"
@@ -1015,6 +1008,11 @@ export const PackagesManagePage = () => {
                     })
                   }
                 />
+                {Number(formData.discountPercent) > 0 && Number(formData.pricePerPerson) > 0 && (
+                  <p className="text-xs font-semibold text-emerald-600">
+                    Customer pays {formatPHP(Math.round(Number(formData.pricePerPerson) * (1 - Number(formData.discountPercent) / 100)))}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
