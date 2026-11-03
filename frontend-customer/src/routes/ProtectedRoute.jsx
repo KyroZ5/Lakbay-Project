@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 export const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, signedOutByUser } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -19,6 +19,8 @@ export const ProtectedRoute = ({ children }) => {
   }
 
   if (!user) {
+    // Deliberate logout from a protected page: go home, don't ask them to log in again
+    if (signedOutByUser) return <Navigate to="/" replace />;
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   }
 

@@ -112,8 +112,9 @@ export const PackagesManagePage = () => {
       setLoading(true);
       setError('');
       const [pkgRes, destRes] = await Promise.all([
-        adminApi.getPackages(),
-        adminApi.getDestinations(),
+        // Backend defaults to 50 rows; request the max so larger catalogs aren't silently truncated
+        adminApi.getPackages({ limit: 200 }),
+        adminApi.getDestinations({ limit: 200 }),
       ]);
       setPackages(pkgRes.data || pkgRes || []);
       setDestinations(destRes.data || destRes || []);
@@ -185,8 +186,15 @@ export const PackagesManagePage = () => {
       imageUrls: (pkg.imageUrls || []).join('\n'),
       isPublished: Boolean(pkg.isPublished),
       isFeatured: Boolean(pkg.isFeatured),
-      itinerary: pkg.itinerary && pkg.itinerary.length > 0
-        ? pkg.itinerary
+      // Deep-copy so builder edits never mutate the package objects held in the table state
+      itinerary: Array.isArray(pkg.itinerary) && pkg.itinerary.length > 0
+        ? pkg.itinerary.map((day) => ({
+            ...day,
+            activities: (day.activities || []).map((act) => ({
+              ...act,
+              coordinates: act.coordinates ? { ...act.coordinates } : act.coordinates,
+            })),
+          }))
         : [
             {
               dayNumber: 1,
@@ -215,36 +223,56 @@ export const PackagesManagePage = () => {
   };
 
   const removeDay = (index) => {
-    const updated = formData.itinerary.filter((_, i) => i !== index);
+    // Renumber remaining days so dayNumber stays sequential (backend keeps the provided dayNumber)
+    const updated = formData.itinerary
+      .filter((_, i) => i !== index)
+      .map((day, i) => ({ ...day, dayNumber: i + 1 }));
     setFormData({ ...formData, itinerary: updated });
   };
 
   const updateDayTitle = (index, title) => {
-    const updated = [...formData.itinerary];
-    updated[index].dayTitle = title;
+    const updated = formData.itinerary.map((day, i) => (i === index ? { ...day, dayTitle: title } : day));
     setFormData({ ...formData, itinerary: updated });
   };
 
   const addActivity = (dayIndex) => {
-    const updated = [...formData.itinerary];
-    updated[dayIndex].activities.push({
-      timeSlot: '12:00 PM',
-      activityName: 'New Activity',
-      locationName: '',
-      description: '',
-    });
+    const updated = formData.itinerary.map((day, i) =>
+      i === dayIndex
+        ? {
+            ...day,
+            activities: [
+              ...(day.activities || []),
+              { timeSlot: '12:00 PM', activityName: 'New Activity', locationName: '', description: '' },
+            ],
+          }
+        : day
+    );
     setFormData({ ...formData, itinerary: updated });
   };
 
   const updateActivityField = (dayIndex, actIndex, field, value) => {
-    const updated = [...formData.itinerary];
-    updated[dayIndex].activities[actIndex][field] = value;
+    const updated = formData.itinerary.map((day, i) => {
+      if (i !== dayIndex) return day;
+      return {
+        ...day,
+        activities: (day.activities || []).map((act, j) => {
+          if (j !== actIndex) return act;
+          const next = { ...act, [field]: value };
+          // Location changed: drop stale coordinates so the backend re-geocodes the map pin
+          if (field === 'locationName') delete next.coordinates;
+          return next;
+        }),
+      };
+    });
     setFormData({ ...formData, itinerary: updated });
   };
 
   const removeActivity = (dayIndex, actIndex) => {
-    const updated = [...formData.itinerary];
-    updated[dayIndex].activities = updated[dayIndex].activities.filter((_, i) => i !== actIndex);
+    const updated = formData.itinerary.map((day, i) =>
+      i === dayIndex
+        ? { ...day, activities: (day.activities || []).filter((_, j) => j !== actIndex) }
+        : day
+    );
     setFormData({ ...formData, itinerary: updated });
   };
 
@@ -255,7 +283,12 @@ export const PackagesManagePage = () => {
     const errors = {};
     if (!formData.name.trim()) errors.name = 'Package name is required.';
     if (!formData.destinationId) errors.destinationId = 'Destination is required.';
+    const priceNum = Number(formData.pricePerPerson);
     if (!formData.pricePerPerson) errors.pricePerPerson = 'Price per person is required.';
+    else if (!Number.isFinite(priceNum) || priceNum <= 0) errors.pricePerPerson = 'Price must be a positive amount.';
+    if (Number(formData.durationNights) > Number(formData.durationDays)) {
+      errors.durationNights = 'Nights cannot exceed the number of days.';
+    }
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -277,7 +310,7 @@ export const PackagesManagePage = () => {
         inclusions: formData.inclusions.split(',').map((s) => s.trim()).filter(Boolean),
         exclusions: formData.exclusions.split(',').map((s) => s.trim()).filter(Boolean),
         imageUrls: formData.imageUrls.split('\n').map((s) => s.trim()).filter(Boolean),
-        itinerary: formData.itinerary,
+        itinerary: formData.itinerary.map((day, i) => ({ ...day, dayNumber: i + 1 })),
         isPublished: formData.isPublished,
         isFeatured: formData.isFeatured,
       };
@@ -301,13 +334,19 @@ export const PackagesManagePage = () => {
 
   // Toggle publish
   const handleTogglePublish = async (pkg) => {
-    if (togglingId) return;
+    // Operators cannot publish directly (backend resets their edits to pending_approval + hidden)
+    if (togglingId || role === 'operator') return;
     try {
       setTogglingId(pkg.id);
       const updated = !pkg.isPublished;
-      await adminApi.updatePackage(pkg.id, { isPublished: updated });
+      const res = await adminApi.updatePackage(pkg.id, { isPublished: updated });
+      const saved = res?.data || {};
       setPackages((prev) =>
-        prev.map((p) => (p.id === pkg.id ? { ...p, isPublished: updated } : p))
+        prev.map((p) =>
+          p.id === pkg.id
+            ? { ...p, isPublished: saved.isPublished ?? updated, approvalStatus: saved.approvalStatus ?? p.approvalStatus }
+            : p
+        )
       );
       notify.success(updated ? `"${pkg.name}" is now live.` : `"${pkg.name}" moved to draft.`);
     } catch (err) {
@@ -338,10 +377,14 @@ export const PackagesManagePage = () => {
   };
 
   const handleRejectPackageConfirm = async () => {
-    if (!rejectModalPkg) return;
+    if (!rejectModalPkg || isRejecting) return;
+    if (!rejectReason.trim()) {
+      notify.error('Please provide a rejection reason for the operator.');
+      return;
+    }
     try {
       setIsRejecting(true);
-      await adminApi.rejectPackage(rejectModalPkg.id, rejectReason);
+      await adminApi.rejectPackage(rejectModalPkg.id, rejectReason.trim());
       setPackages((prev) =>
         prev.map((p) =>
           p.id === rejectModalPkg.id
@@ -360,7 +403,7 @@ export const PackagesManagePage = () => {
 
   // Delete
   const confirmDelete = async () => {
-    if (!packageToDelete) return;
+    if (!packageToDelete || isDeleting) return;
     try {
       setIsDeleting(true);
       await adminApi.deletePackage(packageToDelete.id);
@@ -618,6 +661,16 @@ export const PackagesManagePage = () => {
                             <XCircle className="h-2.5 w-2.5" /> Rejected
                           </Badge>
                         )
+                      ) : role === 'operator' ? (
+                        pkg.isPublished ? (
+                          <Badge variant="success" className="flex items-center gap-1 w-fit">
+                            <Check className="h-3 w-3" /> Live
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-slate-500 border-slate-300">
+                            Draft (Hidden)
+                          </Badge>
+                        )
                       ) : (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -724,6 +777,17 @@ export const PackagesManagePage = () => {
               Configure duration, pricing, inclusions, and multi-day itinerary.
             </DialogDescription>
           </DialogHeader>
+
+          {role === 'operator' && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800 flex items-start gap-2">
+              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                {editingPackage
+                  ? 'Saving changes re-submits this package for compliance review; it is hidden from the catalog until approved again.'
+                  : 'New packages are submitted for compliance review and stay hidden until an administrator approves them.'}
+              </span>
+            </div>
+          )}
 
           {editingPackage && (
             <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-800 flex items-start gap-2">
@@ -846,6 +910,8 @@ export const PackagesManagePage = () => {
                     type="number"
                     min="0"
                     aria-label="Duration nights"
+                    aria-invalid={Boolean(formErrors.durationNights)}
+                    aria-describedby={formErrors.durationNights ? 'pkg-nights-error' : undefined}
                     placeholder="Nights"
                     value={formData.durationNights}
                     onChange={(e) =>
@@ -853,6 +919,7 @@ export const PackagesManagePage = () => {
                     }
                   />
                 </div>
+                <FieldError id="pkg-nights-error">{formErrors.durationNights}</FieldError>
               </div>
 
               <div className="space-y-1.5">
@@ -984,7 +1051,7 @@ export const PackagesManagePage = () => {
 
                     {/* Activities List */}
                     <div className="space-y-2 pl-6 border-l-2 border-emerald-100">
-                      {day.activities.map((act, actIdx) => (
+                      {(day.activities || []).map((act, actIdx) => (
                         <div key={actIdx} className="grid grid-cols-12 gap-2 items-center">
                           <Input
                             aria-label={`Day ${dayIdx + 1} activity ${actIdx + 1} time`}
@@ -1045,7 +1112,8 @@ export const PackagesManagePage = () => {
               maxFiles={10}
             />
 
-            {/* Visibility Toggles */}
+            {/* Visibility Toggles (server-controlled for operators: approval publishes) */}
+            {role !== 'operator' && (
             <div className="flex flex-wrap items-center gap-6 pt-2">
               <div className="flex items-center gap-2">
                 <Switch
@@ -1075,6 +1143,7 @@ export const PackagesManagePage = () => {
                 </Label>
               </div>
             </div>
+            )}
 
             <DialogFooter className="mt-4">
               <Button
@@ -1111,7 +1180,7 @@ export const PackagesManagePage = () => {
         onConfirm={confirmDelete}
       >
         <p className="text-xs text-slate-500">
-          Note: Packages with existing departure schedules cannot be deleted to protect active itineraries and booking history.
+          Note: Packages with existing booking history cannot be deleted. Unpublish them instead.
         </p>
       </ConfirmDialog>
 

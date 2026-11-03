@@ -16,6 +16,10 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
+// Matches the file picker's accept list; drag-and-drop bypasses `accept`, and Storage rules allow
+// any image/* (incl. SVG, which can carry scripts), so enforce the allowlist here.
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
 export const ImageUpload = ({
   value = [],
   onChange,
@@ -62,20 +66,21 @@ export const ImageUpload = ({
 
     const maxBytes = maxSizeMB * 1024 * 1024;
     for (const file of filesToUpload) {
-      if (!file.type.startsWith('image/')) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
         setErrorMessage(`"${file.name}" is not an image. Only PNG, JPEG, and WebP files are allowed.`);
         return;
       }
-      if (file.size > maxBytes) {
+      // Storage rules require size < limit (strictly less)
+      if (file.size >= maxBytes) {
         setErrorMessage(`"${file.name}" exceeds the ${maxSizeMB}MB file size limit.`);
         return;
       }
     }
 
+    const uploadedUrls = [];
     try {
       setUploading(true);
       setUploadProgress(0);
-      const uploadedUrls = [];
 
       for (let i = 0; i < filesToUpload.length; i++) {
         const file = filesToUpload[i];
@@ -114,6 +119,8 @@ export const ImageUpload = ({
 
       updateUrls([...urlList, ...uploadedUrls]);
     } catch (err) {
+      // Keep files that finished uploading before the failure
+      if (uploadedUrls.length > 0) updateUrls([...urlList, ...uploadedUrls]);
       notify.error(err, 'Failed to upload image to storage. You may also paste an image URL directly.');
     } finally {
       setUploading(false);
@@ -306,7 +313,7 @@ export const ImageUpload = ({
                 className="h-full w-full object-cover"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=400&q=80';
+                  e.target.src = 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=400&q=80';
                 }}
               />
 

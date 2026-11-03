@@ -36,21 +36,25 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const config = error.config || {};
 
-    if (error.response?.status === 401 && !config._retried) {
-      try {
-        config._retried = true;
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          await currentUser.getIdToken(true); // force token refresh
-          config.headers.Authorization = `Bearer ${await currentUser.getIdToken()}`;
-          return axiosClient(config);
+    if (error.response?.status === 401) {
+      if (!config._retried) {
+        try {
+          config._retried = true;
+          const currentUser = auth.currentUser;
+          if (currentUser) {
+            await currentUser.getIdToken(true); // force token refresh
+            config.headers.Authorization = `Bearer ${await currentUser.getIdToken()}`;
+            return axiosClient(config);
+          }
+        } catch (refreshErr) {
+          // fall through to session expiry handling below
         }
-      } catch (refreshErr) {
-        // fall through to session expiry handling below
       }
-      // Persistent 401: notify the app to sign out and redirect to login
-      window.dispatchEvent(new Event('auth:session-expired'));
-      return Promise.reject(error);
+      // Persistent 401 (refresh failed, or the retried request was rejected again):
+      // notify the app to sign out and redirect to login
+      if (auth.currentUser) {
+        window.dispatchEvent(new Event('auth:session-expired'));
+      }
     }
 
     const message =

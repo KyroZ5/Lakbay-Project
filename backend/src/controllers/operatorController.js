@@ -5,6 +5,19 @@ import { todayInManila } from '../utils/dates.js';
 
 const APPLICATIONS_COLLECTION = 'operatorApplications';
 
+// Normalize to E.164 for Firebase Auth (which rejects local formats).
+// PH local "09171234567" / "9171234567" / "639171234567" -> "+639171234567".
+// Returns undefined when the number cannot be normalized (phone is then
+// kept in Firestore only).
+const toE164 = (raw) => {
+  const digits = String(raw || '').replace(/[\s\-().]/g, '');
+  if (/^\+[1-9]\d{6,14}$/.test(digits)) return digits;
+  if (/^09\d{9}$/.test(digits)) return `+63${digits.slice(1)}`;
+  if (/^9\d{9}$/.test(digits)) return `+63${digits}`;
+  if (/^639\d{9}$/.test(digits)) return `+${digits}`;
+  return undefined;
+};
+
 /**
  * 1. Public / Client: Submit an application to become a Tour Operator
  */
@@ -20,15 +33,22 @@ export const applyForOperator = async (req, res, next) => {
       description = '',
     } = req.body;
 
-    if (!agencyName || !accreditationNumber || !contactPerson || !email || !phone) {
+    const requiredStrings = { agencyName, accreditationNumber, contactPerson, email, phone };
+    if (Object.values(requiredStrings).some((v) => typeof v !== 'string' || !v.trim())) {
       return sendError(
         res,
         'agencyName, accreditationNumber, contactPerson, email, and phone are required.',
         400
       );
     }
+    if (typeof officeAddress !== 'string' || typeof description !== 'string') {
+      return sendError(res, 'officeAddress and description must be text.', 400);
+    }
 
     const cleanEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return sendError(res, 'A valid email address is required.', 400);
+    }
     const applicantUid = req.user ? req.user.uid : null;
 
     // Check if an application is already pending
@@ -167,6 +187,7 @@ export const approveOperatorApplication = async (req, res, next) => {
 
     const now = new Date().toISOString();
     let operatorUid = appData.applicantUid;
+    let createdNewAccount = false;
 
     // If applicant does not have a linked UID, try finding an existing user by email
     if (!operatorUid && auth) {
@@ -177,14 +198,29 @@ export const approveOperatorApplication = async (req, res, next) => {
         // If user doesn't exist yet, create an account with temporary credentials
         if (err.code === 'auth/user-not-found') {
           const tempPassword = `Lakbay@${Math.floor(100000 + Math.random() * 900000)}`;
-          const createdAuthUser = await auth.createUser({
-            email: appData.email,
-            password: tempPassword,
-            displayName: appData.agencyName,
-            phoneNumber: appData.phone || undefined,
-            emailVerified: true,
-          });
+          // Firebase Auth rejects non-E.164 phone numbers (e.g. local "0917...")
+          // with auth/invalid-phone-number, which used to fail the approval.
+          const createAuth = (phoneNumber) =>
+            auth.createUser({
+              email: appData.email,
+              password: tempPassword,
+              displayName: appData.agencyName,
+              phoneNumber,
+              emailVerified: true,
+            });
+          let createdAuthUser;
+          try {
+            createdAuthUser = await createAuth(toE164(appData.phone));
+          } catch (createErr) {
+            // Phone already used by another Auth account / still invalid: retry without it
+            if (['auth/phone-number-already-exists', 'auth/invalid-phone-number'].includes(createErr.code)) {
+              createdAuthUser = await createAuth(undefined);
+            } else {
+              throw createErr;
+            }
+          }
           operatorUid = createdAuthUser.uid;
+          createdNewAccount = true;
         } else {
           throw err;
         }
@@ -197,7 +233,7 @@ export const approveOperatorApplication = async (req, res, next) => {
 
     // ANTI-HIJACK: never let an application approval take over an existing
     // staff account (e.g. application filed with an admin/support email).
-    const STAFF_ROLES = ['admin', 'support', 'coordinator'];
+    const STAFF_ROLES = ['admin', 'support', 'coordinator', 'guide'];
     const targetUserDoc = await db.collection('users').doc(operatorUid).get();
     const existingRole = targetUserDoc.exists ? targetUserDoc.data().role : null;
     if (STAFF_ROLES.includes(existingRole)) {
@@ -239,7 +275,9 @@ export const approveOperatorApplication = async (req, res, next) => {
       phone: appData.phone,
       officeAddress: appData.officeAddress || '',
       role: 'operator',
-      accountStatus: 'active',
+      // Preserve an existing deactivated status: approving an application must
+      // not silently reactivate an account (Auth `disabled` would stay true anyway).
+      accountStatus: targetUserDoc.exists ? targetUserDoc.data().accountStatus || 'active' : 'active',
       operatorApprovedAt: now,
       updatedAt: now,
     };
@@ -269,10 +307,30 @@ export const approveOperatorApplication = async (req, res, next) => {
       metadata: { agencyName: appData.agencyName, operatorUid },
     });
 
+    // A brand-new account gets a random temp password nobody knows, so hand the
+    // admin a one-time password-setup link to forward to the operator.
+    let passwordSetupLink = null;
+    if (createdNewAccount && auth) {
+      try {
+        passwordSetupLink = await auth.generatePasswordResetLink(appData.email);
+      } catch (linkErr) {
+        console.warn('[ApproveOperator] Could not generate password setup link:', linkErr.message);
+      }
+    }
+
     return sendSuccess(
       res,
-      { applicationId: id, operatorUid, agencyName: appData.agencyName, role: 'operator' },
-      `Operator application approved. ${appData.agencyName} is now an active Tour Operator.`
+      {
+        applicationId: id,
+        operatorUid,
+        agencyName: appData.agencyName,
+        role: 'operator',
+        newAccountCreated: createdNewAccount,
+        passwordSetupLink,
+      },
+      createdNewAccount
+        ? `Operator application approved. A new account was created for ${appData.email}; send them the password setup link (or they can use "Forgot password").`
+        : `Operator application approved. ${appData.agencyName} is now an active Tour Operator.`
     );
   } catch (error) {
     next(error);
@@ -292,6 +350,23 @@ export const rejectOperatorApplication = async (req, res, next) => {
 
     if (!docSnap.exists) {
       return sendError(res, 'Operator application not found', 404);
+    }
+
+    // Only pending applications can be rejected. Rejecting an approved one would
+    // mark it rejected while the account keeps the operator role (deactivate the
+    // operator instead).
+    const currentStatus = docSnap.data().status;
+    if (currentStatus !== 'pending') {
+      return sendError(
+        res,
+        currentStatus === 'approved'
+          ? 'This application is already approved. Deactivate the operator account instead of rejecting it.'
+          : `Only pending applications can be rejected (current status: ${currentStatus || 'unknown'}).`,
+        400
+      );
+    }
+    if (typeof reason !== 'string') {
+      return sendError(res, 'reason must be text', 400);
     }
 
     const now = new Date().toISOString();

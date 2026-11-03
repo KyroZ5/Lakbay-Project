@@ -77,32 +77,32 @@
   }
 }
 
-/* Scroll-reveal utilities (JS-driven via IntersectionObserver / framer-motion) */
+@layer components {
+/* Scroll-reveal utilities (driven by components/common/ScrollReveal.jsx).
+   Elements are only hidden while <html> has .reveal-ready, which ScrollReveal adds once its
+   observers are running — if the script never runs or errors, content stays visible. */
 .reveal-up {
-  opacity: 0;
-  transform: translateY(24px);
   transition: opacity 0.7s ease-out, transform 0.7s ease-out;
 }
-.reveal-up.visible {
-  opacity: 1;
-  transform: translateY(0);
+.reveal-ready .reveal-up:not(.visible) {
+  opacity: 0;
+  transform: translateY(24px);
 }
 
 /* Staggered list reveal delays */
 .reveal-stagger > * {
-  opacity: 0;
-  transform: translateY(16px);
   transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
-.reveal-stagger > *.visible {
-  opacity: 1;
-  transform: translateY(0);
+.reveal-ready .reveal-stagger > *:not(.visible) {
+  opacity: 0;
+  transform: translateY(16px);
 }
 .reveal-stagger > *.visible:nth-child(1) { transition-delay: 0.08s; }
 .reveal-stagger > *.visible:nth-child(2) { transition-delay: 0.16s; }
 .reveal-stagger > *.visible:nth-child(3) { transition-delay: 0.24s; }
 .reveal-stagger > *.visible:nth-child(4) { transition-delay: 0.32s; }
 .reveal-stagger > *.visible:nth-child(5) { transition-delay: 0.40s; }
+}
 
 /* Shimmer loading effect */
 @keyframes shimmer {
@@ -184,14 +184,13 @@
 }
 
 /* Section reveal scroll */
+/* Unused legacy class — hidden only under .reveal-ready like the other reveal classes */
 .reveal-section {
-  opacity: 0;
-  transform: translateY(30px);
   transition: opacity 0.8s ease-out, transform 0.8s ease-out;
 }
-.reveal-section.visible {
-  opacity: 1;
-  transform: translateY(0);
+.reveal-ready .reveal-section:not(.visible) {
+  opacity: 0;
+  transform: translateY(30px);
 }
 
 /* Hover underline */
@@ -211,3 +210,193 @@
 .hover-underline:hover::after {
   width: 100%;
 }
+
+/* ============================================================
+   RICH UI EFFECTS — decorative elements for a lively travel UI
+   ============================================================ */
+
+/* Gradient headline text (emerald → teal → coral) */
+.text-gradient {
+  background: linear-gradient(100deg, #047857 0%, #059669 35%, #14b8a6 65%, #f97316 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.text-gradient-animated {
+  animation: shimmer 4s linear infinite;
+}
+.text-gradient-warm {
+  background: linear-gradient(100deg, #f97316, #fbbf24, #f97316);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 3.5s linear infinite;
+}
+
+/* Glassmorphism surface */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+}
+.glass-dark {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Floating decorative orbs */
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+  animation: float-slow 14s ease-in-out infinite;
+}
+.orb-emerald { background: radial-gradient(circle, rgba(16, 185, 129, 0.55), transparent 70%); }
+.orb-teal { background: radial-gradient(circle, rgba(20, 184, 166, 0.5), transparent 70%); }
+.orb-coral { background: radial-gradient(circle, rgba(249, 115, 22, 0.45), transparent 70%); }
+.orb-amber { background: radial-gradient(circle, rgba(245, 158, 11, 0.4), transparent 70%); }
+.orb-sky { background: radial-gradient(circle, rgba(14, 165, 233, 0.4), transparent 70%); }
+
+/* Subtle dotted grid backdrop */
+.bg-dots {
+  background-image: radial-gradient(rgba(5, 150, 105, 0.14) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.bg-dots-light {
+  background-image: radial-gradient(rgba(148, 163, 184, 0.25) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Soft noise texture overlay */
+.bg-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Marquee / logo ticker */
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Image hover zoom wrapper */
+.img-zoom {
+  overflow: hidden;
+}
+.img-zoom img,
+.img-zoom .img-inner {
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.img-zoom:hover img,
+.img-zoom:hover .img-inner {
+  transform: scale(1.08);
+}
+
+/* Tilt-up card hover */
+.card-tilt {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+}
+.card-tilt:hover {
+  transform: translateY(-8px) rotate(-0.4deg);
+  box-shadow: 0 28px 50px -18px rgba(2, 44, 34, 0.35);
+}
+
+/* Gradient border card (emerald → coral) */
+.border-gradient {
+  position: relative;
+  background: #fff;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.border-gradient::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.65), rgba(20, 184, 166, 0.35), rgba(249, 115, 22, 0.55));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Ribbon / ticket notched badge */
+.ticket {
+  position: relative;
+  background: linear-gradient(135deg, #047857, #059669 55%, #14b8a6);
+  color: #fff;
+}
+.ticket::after {
+  content: '';
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  background: inherit;
+  border-radius: 50%;
+}
+
+/* Star rating filled gradient */
+.stars-filled {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Section wave divider */
+.wave-divider {
+  display: block;
+  width: 100%;
+  height: 56px;
+}
+
+/* Animated gradient border for hero search / CTA */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes border-rotate {
+  to { --angle: 360deg; }
+}
+.animated-border {
+  position: relative;
+  border-radius: 1rem;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    conic-gradient(from var(--angle, 0deg), #059669, #14b8a6, #f97316, #059669) border-box;
+  border: 2px solid transparent;
+  animation: border-rotate 4s linear infinite;
+}
+
+/* Confetti-ish decorative sprinkle for empty states */
+.sprinkle {
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(5, 150, 105, 0.25) 0 6px, transparent 7px),
+    radial-gradient(circle at 75% 20%, rgba(249, 115, 22, 0.22) 0 5px, transparent 6px),
+    radial-gradient(circle at 60% 75%, rgba(14, 165, 233, 0.2) 0 7px, transparent 8px),
+    radial-gradient(circle at 30% 80%, rgba(245, 158, 11, 0.2) 0 4px, transparent 5px);
+}
+
+/* Scrollbar for horizontal chip rows */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

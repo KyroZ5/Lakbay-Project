@@ -89,7 +89,8 @@ export const DestinationsManagePage = () => {
     try {
       setLoading(true);
       setError('');
-      const res = await adminApi.getDestinations();
+      // Backend defaults to 50 rows; request the max so larger catalogs aren't silently truncated
+      const res = await adminApi.getDestinations({ limit: 200 });
       setDestinations(res.data || res || []);
     } catch (err) {
       console.error('[DestinationsManagePage] Fetch error:', err);
@@ -178,8 +179,20 @@ export const DestinationsManagePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (saving) return;
-    if (!formData.name.trim()) {
-      setFormErrors({ name: 'Destination name is required.' });
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Destination name is required.';
+    const latStr = String(formData.lat).trim();
+    const lngStr = String(formData.lng).trim();
+    const lat = Number(latStr);
+    const lng = Number(lngStr);
+    const hasCoords = latStr !== '' && lngStr !== '';
+    if ((latStr === '') !== (lngStr === '')) {
+      errors.coordinates = 'Enter both latitude and longitude, or leave both blank to auto-geocode.';
+    } else if (hasCoords && (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)) {
+      errors.coordinates = 'Latitude must be between -90 and 90 and longitude between -180 and 180.';
+    }
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
     setFormErrors({});
@@ -193,10 +206,9 @@ export const DestinationsManagePage = () => {
         location: formData.location.trim(),
         category: formData.category,
         description: formData.description,
-        coordinates: {
-          lat: parseFloat(formData.lat) || 12.8797,
-          lng: parseFloat(formData.lng) || 121.774,
-        },
+        // Omit blank coordinates so the backend geocodes the name/location via Geoapify
+        // (sending a hard-coded PH centroid suppressed server-side geocoding)
+        ...(hasCoords ? { coordinates: { lat, lng } } : {}),
         recommendedActivities: formData.recommendedActivities
           .split(',')
           .map((a) => a.trim())
@@ -246,7 +258,7 @@ export const DestinationsManagePage = () => {
 
   // Delete Destination Guard
   const confirmDelete = async () => {
-    if (!destinationToDelete) return;
+    if (!destinationToDelete || isDeleting) return;
     try {
       setIsDeleting(true);
       await adminApi.deleteDestination(destinationToDelete.id);
@@ -435,7 +447,9 @@ export const DestinationsManagePage = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs font-mono text-slate-500">
-                    {dest.coordinates?.lat?.toFixed(4)}, {dest.coordinates?.lng?.toFixed(4)}
+                    {Number.isFinite(Number(dest.coordinates?.lat)) && Number.isFinite(Number(dest.coordinates?.lng))
+                      ? `${Number(dest.coordinates.lat).toFixed(4)}, ${Number(dest.coordinates.lng).toFixed(4)}`
+                      : 'Not set'}
                   </TableCell>
                   <TableCell>
                     <Tooltip>
@@ -608,6 +622,7 @@ export const DestinationsManagePage = () => {
                 </Button>
               </div>
               <FieldError id="dest-geocode-hint">{geocodeHint}</FieldError>
+              <FieldError id="dest-coords-error">{formErrors.coordinates}</FieldError>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="dest-lat" className="text-[11px] text-slate-500">

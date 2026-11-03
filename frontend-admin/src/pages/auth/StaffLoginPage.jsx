@@ -22,7 +22,9 @@ export const StaffLoginPage = () => {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const fromLocation = location.state?.from;
+  // Default to '/', which redirects each role to a landing page it can access
+  const from = fromLocation?.pathname ? fromLocation.pathname + (fromLocation.search || '') : '/';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,7 +79,7 @@ export const StaffLoginPage = () => {
               Staff Authentication
             </CardTitle>
             <CardDescription className="text-slate-400 text-xs">
-              Restricted to Coordinators, Support Agents, Guides, and Admins.
+              Restricted to Coordinators, Support Agents, Guides, Tour Operators, and Admins.
             </CardDescription>
           </CardHeader>
 

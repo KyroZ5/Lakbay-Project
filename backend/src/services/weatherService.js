@@ -3,6 +3,14 @@ import axios from 'axios';
 // In-memory cache with TTL (20 minutes)
 const cache = new Map();
 const CACHE_TTL_MS = 20 * 60 * 1000;
+// After an upstream failure, cache the fallback only briefly so real data
+// returns quickly once OpenWeather recovers.
+const FAILURE_TTL_MS = 60 * 1000;
+// Bound memory: keys come from public lat/lng query params.
+const MAX_CACHE_ENTRIES = 1000;
+
+// Forecast days are business days in Asia/Manila (UTC+08:00, no DST).
+const manilaDate = (date) => date.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
 const getCached = (key) => {
   const item = cache.get(key);
@@ -14,8 +22,22 @@ const getCached = (key) => {
   return item.data;
 };
 
-const setCache = (key, data) => {
-  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+const setCache = (key, data, ttlMs = CACHE_TTL_MS) => {
+  if (cache.size >= MAX_CACHE_ENTRIES && !cache.has(key)) {
+    cache.delete(cache.keys().next().value); // evict oldest insertion
+  }
+  cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+};
+
+const isValidCoord = (lat, lng) => {
+  const la = Number(lat);
+  const ln = Number(lng);
+  return Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) <= 90 && Math.abs(ln) <= 180;
+};
+
+const hasApiKey = () => {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+  return Boolean(apiKey && !apiKey.toLowerCase().includes('placeholder'));
 };
 
 /**
@@ -38,12 +60,10 @@ const getFallbackCurrentWeather = (lat, lng) => ({
 
 const getFallbackForecast = () => {
   const forecast = [];
-  const today = new Date();
+  const now = Date.now();
 
   for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = manilaDate(new Date(now + i * 24 * 60 * 60 * 1000));
 
     forecast.push({
       date: dateStr,
@@ -64,7 +84,7 @@ const getFallbackForecast = () => {
  * Fetch current weather by coordinates
  */
 export const getCurrentWeather = async (lat, lng) => {
-  if (lat === undefined || lng === undefined) {
+  if (lat === undefined || lng === undefined || !isValidCoord(lat, lng)) {
     return getFallbackCurrentWeather(14.5995, 120.9842);
   }
 
@@ -86,10 +106,11 @@ export const getCurrentWeather = async (lat, lng) => {
           units: 'metric',
           appid: apiKey,
         },
-        timeout: 5000,
+        timeout: 3000, // keep upstream calls well inside the serverless time budget
       });
 
       const data = response.data;
+      if (!data?.main) throw new Error('Unexpected OpenWeather response shape');
       const weatherResult = {
         temp: Math.round(data.main.temp * 10) / 10,
         feelsLike: Math.round(data.main.feels_like * 10) / 10,
@@ -113,7 +134,7 @@ export const getCurrentWeather = async (lat, lng) => {
   }
 
   const fallback = getFallbackCurrentWeather(roundedLat, roundedLng);
-  setCache(cacheKey, fallback);
+  setCache(cacheKey, fallback, hasApiKey() ? FAILURE_TTL_MS : CACHE_TTL_MS);
   return fallback;
 };
 
@@ -121,7 +142,7 @@ export const getCurrentWeather = async (lat, lng) => {
  * Fetch 5-day / 7-day forecast by coordinates
  */
 export const getForecast = async (lat, lng) => {
-  if (lat === undefined || lng === undefined) {
+  if (lat === undefined || lng === undefined || !isValidCoord(lat, lng)) {
     return getFallbackForecast();
   }
 
@@ -143,14 +164,20 @@ export const getForecast = async (lat, lng) => {
           units: 'metric',
           appid: apiKey,
         },
-        timeout: 5000,
+        timeout: 3000, // keep upstream calls well inside the serverless time budget
       });
 
       // Aggregate 3-hour forecast intervals into daily summaries
       const dailyMap = new Map();
 
-      for (const item of response.data.list || []) {
-        const dateStr = item.dt_txt.split(' ')[0];
+      for (const item of response.data?.list || []) {
+        if (!item?.main) continue;
+        // dt_txt is UTC; group by the Asia/Manila calendar day instead so
+        // late-evening (local) slots are not attributed to the previous day.
+        const dateStr = item.dt
+          ? manilaDate(new Date(item.dt * 1000))
+          : String(item.dt_txt || '').split(' ')[0];
+        if (!dateStr) continue;
         if (!dailyMap.has(dateStr)) {
           dailyMap.set(dateStr, {
             date: dateStr,
@@ -194,6 +221,6 @@ export const getForecast = async (lat, lng) => {
   }
 
   const fallback = getFallbackForecast();
-  setCache(cacheKey, fallback);
+  setCache(cacheKey, fallback, hasApiKey() ? FAILURE_TTL_MS : CACHE_TTL_MS);
   return fallback;
 };

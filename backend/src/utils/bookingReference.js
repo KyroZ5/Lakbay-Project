@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { todayInManila } from './dates.js';
 
 /**
  * Generates a unique, collision-resistant booking reference in format:
@@ -6,11 +7,8 @@ import crypto from 'crypto';
  * Example: LKB-20261015-8F3A
  */
 export const generateBookingReference = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const dateSegment = `${year}${month}${day}`;
+  // Business date (Asia/Manila), not the server-local date
+  const dateSegment = todayInManila().replace(/-/g, '');
   
   // 4 random alphanumeric characters in uppercase
   const randomSegment = crypto.randomBytes(2).toString('hex').toUpperCase();

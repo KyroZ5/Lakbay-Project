@@ -40,12 +40,14 @@ export const PaymentsRefundsPage = () => {
   const [exceptionReason, setExceptionReason] = useState('Medical / Emergency documentation verified');
   const [processingRefund, setProcessingRefund] = useState(false);
   const [reasonError, setReasonError] = useState('');
+  const [selectedForManualRefund, setSelectedForManualRefund] = useState(null);
+  const [markingManual, setMarkingManual] = useState(false);
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
       setError('');
-      const res = await adminApi.getAllBookings({ limit: 100 });
+      const res = await adminApi.getAllBookings({ limit: 200 });
       setBookings(res.data || res || []);
     } catch (err) {
       console.error('[PaymentsRefundsPage] Error:', err);
@@ -82,10 +84,22 @@ export const PaymentsRefundsPage = () => {
 
     try {
       setProcessingRefund(true);
-      await adminApi.processExceptionRefund(selectedBookingForRefund.id, exceptionReason);
-      notify.success(
-        `Refund processed for ${selectedBookingForRefund.bookingReference}. Stripe refund dispatched and reserved seats released.`
-      );
+      const res = await adminApi.processExceptionRefund(selectedBookingForRefund.id, exceptionReason);
+      const result = res?.data || {};
+      // Refund honesty: the backend cancels the booking even when the Stripe
+      // refund fails — only claim success when the refund actually went through.
+      if (result.refundProcessed) {
+        notify.success(
+          `Refund processed for ${selectedBookingForRefund.bookingReference}. Stripe refund dispatched and reserved seats released.`
+        );
+      } else if (result.refundFailed) {
+        notify.warning(
+          `Booking ${selectedBookingForRefund.bookingReference} cancelled and seats released, but the Stripe refund FAILED (${result.refundSkippedReason || 'unknown reason'}). Complete the refund manually.`,
+          { duration: 10000 }
+        );
+      } else {
+        notify.success(res?.message || `Booking ${selectedBookingForRefund.bookingReference} cancelled.`);
+      }
       setSelectedBookingForRefund(null);
       fetchTransactions();
     } catch (err) {
@@ -95,9 +109,30 @@ export const PaymentsRefundsPage = () => {
     }
   };
 
+  const handleMarkManuallyRefunded = async () => {
+    if (!selectedForManualRefund || markingManual) return;
+    try {
+      setMarkingManual(true);
+      await adminApi.supportUpdateBooking(selectedForManualRefund.id, {
+        paymentStatus: 'Refunded',
+        internalNotes: 'Refund completed manually outside the automatic Stripe flow (marked by support).',
+      });
+      notify.success(`Booking ${selectedForManualRefund.bookingReference} marked as manually refunded.`);
+      setSelectedForManualRefund(null);
+      fetchTransactions();
+    } catch (err) {
+      notify.error(err, 'Failed to update payment status.');
+    } finally {
+      setMarkingManual(false);
+    }
+  };
+
+  const CLOSED_STATUSES = ['Cancelled', 'Completed', 'Rejected'];
+  const isRefundFailed = (b) => b.refundStatus === 'failed' && b.paymentStatus === 'Paid';
+
   // Filter lists
   const pendingReviews = bookings.filter(
-    (b) => b.cancellationRequested && b.bookingStatus !== 'Cancelled'
+    (b) => (b.cancellationRequested && !CLOSED_STATUSES.includes(b.bookingStatus)) || isRefundFailed(b)
   );
 
   const refundedRecords = bookings.filter(
@@ -295,15 +330,25 @@ export const PaymentsRefundsPage = () => {
                       >
                         {b.paymentStatus}
                       </Badge>
-                      {b.cancellationRequested && b.bookingStatus !== 'Cancelled' && (
+                      {b.cancellationRequested && !CLOSED_STATUSES.includes(b.bookingStatus) && (
                         <Badge variant="warning" className="text-[10px] px-1.5 py-0">
                           Exception Review
+                        </Badge>
+                      )}
+                      {b.bookingStatus && b.bookingStatus !== 'Confirmed' && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {b.bookingStatus}
+                        </Badge>
+                      )}
+                      {isRefundFailed(b) && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                          Refund Failed
                         </Badge>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    {b.cancellationRequested && b.bookingStatus !== 'Cancelled' ? (
+                    {b.cancellationRequested && !CLOSED_STATUSES.includes(b.bookingStatus) ? (
                       <Button
                         size="sm"
                         onClick={() =>
@@ -314,7 +359,16 @@ export const PaymentsRefundsPage = () => {
                         <RotateCcw className="h-3.5 w-3.5" />
                         Review & Refund
                       </Button>
-                    ) : b.paymentStatus === 'Paid' ? (
+                    ) : isRefundFailed(b) ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedForManualRefund(b)}
+                        className="text-xs text-red-600 border-red-200 hover:bg-red-50 ml-auto"
+                      >
+                        Mark Manually Refunded
+                      </Button>
+                    ) : b.paymentStatus === 'Paid' && !CLOSED_STATUSES.includes(b.bookingStatus) ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -400,10 +454,29 @@ export const PaymentsRefundsPage = () => {
           </div>
 
           <p className="text-[11px] text-slate-500">
-            Upon confirmation, the booking status will be updated to <strong>Cancelled</strong>, payment status to <strong>Refunded</strong>, and all {selectedBookingForRefund?.numberOfTravelers} slot(s) will be returned to the departure inventory.
+            Upon confirmation, the booking status will be updated to <strong>Cancelled</strong> and all {selectedBookingForRefund?.numberOfTravelers} slot(s) will be returned to the departure inventory. Payment status becomes <strong>Refunded</strong> only if Stripe confirms the refund; otherwise it is flagged as <strong>Refund Failed</strong> for manual follow-up.
           </p>
         </div>
       </ConfirmDialog>
+
+      {/* Manual refund confirmation (for failed automatic refunds) */}
+      <ConfirmDialog
+        open={Boolean(selectedForManualRefund)}
+        onOpenChange={(open) => !open && !markingManual && setSelectedForManualRefund(null)}
+        title="Mark refund as completed manually?"
+        description={
+          <>
+            Only confirm if the {formatPHP(selectedForManualRefund?.totalPrice)} refund for{' '}
+            <strong className="text-slate-800">{selectedForManualRefund?.bookingReference}</strong> has actually been
+            returned to the customer (e.g. via the Stripe dashboard). The automatic refund failed
+            {selectedForManualRefund?.refundFailureReason ? ` (${selectedForManualRefund.refundFailureReason})` : ''}.
+          </>
+        }
+        confirmLabel="Mark as Refunded"
+        loadingLabel="Updating..."
+        loading={markingManual}
+        onConfirm={handleMarkManuallyRefunded}
+      />
     </div>
   );
 };

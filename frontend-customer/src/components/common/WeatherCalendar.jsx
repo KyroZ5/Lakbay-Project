@@ -14,6 +14,14 @@ export const WeatherCalendar = ({
   const [forecasts, setForecasts] = useState({});
   const [currentWeather, setCurrentWeather] = useState(null);
 
+  // Show the month of the selected departure (e.g. all departures are next year)
+  const selectedDate = departures.find((d) => d.id === selectedDepartureId)?.departureDate;
+  useEffect(() => {
+    if (!selectedDate) return;
+    const [y, m] = selectedDate.split('-').map(Number);
+    if (y && m) setCurrentMonth(new Date(y, m - 1, 1));
+  }, [selectedDate]);
+
   // Fetch destination forecast and current weather
   useEffect(() => {
     if (destinationCoordinates?.lat && destinationCoordinates?.lng) {

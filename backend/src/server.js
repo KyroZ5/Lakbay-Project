@@ -8,35 +8,44 @@ import { errorHandler } from './middlewares/errorHandler.js';
 import { sendError } from './utils/apiResponse.js';
 import { db, isFirebaseInitialized } from './config/firebaseAdmin.js';
 import apiRoutes from './routes/index.js';
+import { isAllowedOrigin } from './config/urls.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
-const isProduction = process.env.NODE_ENV === 'production';
+// Any Vercel deployment counts as production (strict rate limit), even if NODE_ENV is unset.
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
+// Behind a reverse proxy (Vercel, or nginx in Docker Compose) every request
+// otherwise appears to come from the proxy IP, so the rate limiter would put
+// ALL clients in one shared bucket. Trust exactly one hop on Vercel by default;
+// set TRUST_PROXY=1 when running behind the nginx /api proxy.
+const trustProxy = process.env.TRUST_PROXY ?? (process.env.VERCEL === '1' ? '1' : '');
+if (trustProxy) {
+  app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy);
+}
 
 // Security HTTP headers
 app.use(helmet());
 
 // CORS Configuration — allowlist is ALWAYS enforced (no dev bypass).
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:3000',
-  process.env.ADMIN_URL || 'http://localhost:3001',
-  'http://localhost:5173', // Vite default dev port
-  'http://localhost:5174',
-];
-
+// Origins come from CLIENT_URL / ADMIN_URL / CORS_ORIGINS (comma-separated,
+// trailing slashes stripped); see src/config/urls.js.
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || isAllowedOrigin(origin)) {
         return callback(null, true);
       }
-      return callback(new Error(`CORS policy blocks access from origin: ${origin}`));
+      const corsErr = new Error(`CORS policy blocks access from origin: ${origin}`);
+      corsErr.statusCode = 403; // was surfacing as a 500 Internal Server Error
+      return callback(corsErr);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature'],
+    maxAge: 600, // cache preflights for 10 min (cross-origin frontends on Vercel)
   })
 );
 
@@ -53,11 +62,26 @@ const apiLimiter = rateLimit({
 // Morgan request logging
 app.use(requestLogger);
 
-// Body parsers: preserve raw body for Stripe webhook signature verification
+// Stripe webhook: read the body as RAW bytes before any JSON parsing so the
+// signature can be verified byte-for-byte (works locally and on Vercel; set
+// NODEJS_HELPERS=0 on Vercel so the platform never pre-parses the body).
+app.use('/api/webhooks', express.raw({ type: '*/*', limit: '1mb' }), (req, res, next) => {
+  if (Buffer.isBuffer(req.body)) {
+    req.rawBody = req.body;
+    try {
+      req.body = req.rawBody.length ? JSON.parse(req.rawBody.toString('utf8')) : {};
+    } catch {
+      req.body = {};
+    }
+  }
+  next();
+});
+
+// Body parsers for every other route (express.json skips requests already parsed above)
 app.use(
   express.json({
     verify: (req, res, buf) => {
-      if (req.originalUrl.startsWith('/api/webhooks')) {
+      if (req.originalUrl.startsWith('/api/webhooks') && !req.rawBody) {
         req.rawBody = buf;
       }
     },

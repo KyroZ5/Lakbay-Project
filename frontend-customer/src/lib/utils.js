@@ -26,9 +26,13 @@ export function formatCurrency(amount) {
 export function formatDate(dateString) {
   if (!dateString) return 'TBA';
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return 'TBA';
+  // 'YYYY-MM-DD' parses as UTC midnight; formatting in Manila (UTC+8) keeps the same calendar day
+  // for every visitor, and timestamps show in the business timezone.
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    timeZone: 'Asia/Manila',
   });
 }

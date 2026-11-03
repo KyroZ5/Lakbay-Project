@@ -39,5 +39,8 @@
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
     "vite": "^6.1.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

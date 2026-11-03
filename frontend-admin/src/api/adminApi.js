@@ -50,6 +50,8 @@ export const adminApi = {
 
   // Users & Staff IAM
   getUsers: (params) => axiosClient.get('/admin/users', { params }),
+  // Active guides ({uid, fullName}) — accessible to admin/coordinator/operator for departure assignment
+  getGuides: () => axiosClient.get('/admin/guides'),
   createStaffAccount: (data) => axiosClient.post('/admin/users', data),
   setUserAccountStatus: (uid, accountStatus) =>
     axiosClient.patch(`/admin/users/${uid}/status`, { accountStatus }),
@@ -82,11 +84,11 @@ export const adminApi = {
   togglePromotion: (id) => axiosClient.patch(`/promotions/admin/${id}/toggle`),
   deletePromotion: (id) => axiosClient.delete(`/promotions/admin/${id}`),
 
-  // Location & Weather Proxies
+  // Location & Weather Proxies (backend reads `query`, `address`, and `lat`/`lng`)
   autocompleteLocation: (text) =>
-    axiosClient.get('/external/location/autocomplete', { params: { text } }),
+    axiosClient.get('/external/location/autocomplete', { params: { query: text } }),
   geocodeLocation: (text) =>
-    axiosClient.get('/external/location/geocode', { params: { text } }),
-  getWeather: (lat, lon) =>
-    axiosClient.get('/external/weather/current', { params: { lat, lon } }),
+    axiosClient.get('/external/location/geocode', { params: { address: text } }),
+  getWeather: (lat, lng) =>
+    axiosClient.get('/external/weather/current', { params: { lat, lng } }),
 };

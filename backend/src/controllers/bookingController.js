@@ -1,17 +1,25 @@
 import { db } from '../config/firebaseAdmin.js';
 import { stripe, isStripeInitialized, DEFAULT_CURRENCY } from '../config/stripe.js';
-import { sendSuccess, sendError } from '../utils/apiResponse.js';
+import { sendSuccess, sendError, httpError } from '../utils/apiResponse.js';
 import { generateBookingReference } from '../utils/bookingReference.js';
-import { todayInManila } from '../utils/dates.js';
+import { todayInManila, daysBetweenDateStrs } from '../utils/dates.js';
 import { parseLimit } from '../utils/query.js';
 import { logActivity } from '../services/auditService.js';
 import { computeBookingDeadline } from './departureController.js';
+import { getClientBaseUrl } from '../config/urls.js';
 
 const BOOKINGS_COLLECTION = 'bookings';
 const DEPARTURES_COLLECTION = 'departures';
 const PACKAGES_COLLECTION = 'tourPackages';
 const PAYMENTS_COLLECTION = 'payments';
 const NOTIFICATIONS_COLLECTION = 'notifications';
+
+/** Rule D helper: does this operator own the package? (missing operatorId = platform-owned) */
+const operatorOwnsPackage = async (operatorUid, packageId) => {
+  if (!packageId) return false;
+  const pDoc = await db.collection(PACKAGES_COLLECTION).doc(packageId).get();
+  return pDoc.exists && pDoc.data().operatorId === operatorUid;
+};
 
 /**
  * 1. Checkout Creation (POST /api/bookings/checkout)
@@ -20,6 +28,13 @@ const NOTIFICATIONS_COLLECTION = 'notifications';
  */
 export const createCheckoutSession = async (req, res, next) => {
   try {
+    // Fail loudly (before reserving seats) rather than redirecting paying
+    // customers to localhost when CLIENT_URL is missing in production.
+    if (!getClientBaseUrl()) {
+      console.error('[Checkout] CLIENT_URL is not configured; refusing to create a checkout session.');
+      return sendError(res, 'Checkout is temporarily unavailable (server misconfiguration).', 500);
+    }
+
     const {
       packageId,
       departureId,
@@ -64,9 +79,27 @@ export const createCheckoutSession = async (req, res, next) => {
     const effectivePricePerPerson = (discountPercent > 0 && discountPercent < 100)
       ? (Number(pkgData.discountPrice) || Math.round(originalPricePerPerson * (1 - discountPercent / 100)))
       : (Number(pkgData.effectivePrice) || originalPricePerPerson);
+    if (!Number.isFinite(effectivePricePerPerson) || effectivePricePerPerson <= 0) {
+      // Misconfigured package price would otherwise produce a NaN/0 total and a broken Stripe session
+      return sendError(res, 'This tour package has no valid price configured and cannot be booked', 400);
+    }
     const discountAppliedPerPerson = Math.max(0, originalPricePerPerson - effectivePricePerPerson);
     const pricePerPerson = effectivePricePerPerson;
     const totalPrice = Math.round(pricePerPerson * travelerCount * 100) / 100;
+
+    // No mass assignment: keep only known traveler fields as strings, never more
+    // entries than travelers (prevents injecting e.g. isCheckedIn or nested objects).
+    const MANIFEST_FIELDS = ['fullName', 'birthDate', 'relationship', 'dietaryOrMedicalNotes', 'contactPhone'];
+    const sanitizedManifest = (Array.isArray(travelerManifest) ? travelerManifest : [])
+      .filter((t) => t && typeof t === 'object')
+      .slice(0, travelerCount)
+      .map((t) => {
+        const clean = {};
+        for (const f of MANIFEST_FIELDS) {
+          if (t[f] !== undefined && t[f] !== null) clean[f] = String(t[f]).slice(0, 500);
+        }
+        return clean;
+      });
     const bookingReference = generateBookingReference();
     const now = new Date().toISOString();
 
@@ -76,7 +109,7 @@ export const createCheckoutSession = async (req, res, next) => {
     await db.runTransaction(async (transaction) => {
       const depDoc = await transaction.get(depRef);
       if (!depDoc.exists) {
-        throw new Error('Selected departure schedule not found');
+        throw httpError('Selected departure schedule not found', 404);
       }
 
       const depData = depDoc.data();
@@ -84,16 +117,16 @@ export const createCheckoutSession = async (req, res, next) => {
       // SECURITY: the departure must belong to the requested package — otherwise a
       // cheap packageId could be paired with an expensive departureId (price fraud).
       if (depData.packageId !== packageId) {
-        throw new Error('Selected departure does not belong to the selected tour package');
+        throw httpError('Selected departure does not belong to the selected tour package', 400);
       }
 
       if (depData.status !== 'open') {
-        throw new Error(`Departure schedule is not open for bookings (status: ${depData.status})`);
+        throw httpError(`Departure schedule is not open for bookings (status: ${depData.status})`, 409);
       }
 
       const today = todayInManila();
       if (depData.departureDate < today) {
-        throw new Error('Cannot book a departure date in the past');
+        throw httpError('Cannot book a departure date in the past', 400);
       }
 
       // Rule D: Booking Deadline - Prevent reservations after deadline
@@ -102,7 +135,7 @@ export const createCheckoutSession = async (req, res, next) => {
         computeBookingDeadline(
           depData.departureDate,
           depData.departureTime || '07:00 AM',
-          depData.bookingDeadlineHours || 24
+          depData.bookingDeadlineHours !== undefined ? Number(depData.bookingDeadlineHours) : 24
         );
 
       if (now > deadline) {
@@ -110,8 +143,9 @@ export const createCheckoutSession = async (req, res, next) => {
           dateStyle: 'medium',
           timeStyle: 'short',
         });
-        throw new Error(
-          `Booking deadline passed: Reservations for this departure closed on ${formattedCutoff}. New bookings are no longer accepted (Rule D).`
+        throw httpError(
+          `Booking deadline passed: Reservations for this departure closed on ${formattedCutoff}. New bookings are no longer accepted (Rule D).`,
+          409
         );
       }
 
@@ -120,8 +154,9 @@ export const createCheckoutSession = async (req, res, next) => {
       const remainingSlots = capacity - currentBooked;
 
       if (currentBooked + travelerCount > capacity) {
-        throw new Error(
-          `Insufficient seats remaining. Requested: ${travelerCount}, Available: ${Math.max(0, remainingSlots)}`
+        throw httpError(
+          `Insufficient seats remaining. Requested: ${travelerCount}, Available: ${Math.max(0, remainingSlots)}`,
+          409
         );
       }
 
@@ -149,7 +184,7 @@ export const createCheckoutSession = async (req, res, next) => {
         customerEmail: customerEmail || req.user.email || '',
         customerPhone: customerPhone || '',
         numberOfTravelers: travelerCount,
-        travelerManifest: Array.isArray(travelerManifest) ? travelerManifest : [],
+        travelerManifest: sanitizedManifest,
         originalPricePerPerson,
         discountPercent,
         discountAppliedPerPerson,
@@ -157,8 +192,8 @@ export const createCheckoutSession = async (req, res, next) => {
         totalPrice,
         bookingStatus: 'Pending',
         paymentStatus: 'Unpaid',
-        specialRequests,
-        cancellationCutoffDays: pkgData.cancellationCutoffDays || 7,
+        specialRequests: String(specialRequests ?? '').slice(0, 2000),
+        cancellationCutoffDays: pkgData.cancellationCutoffDays ?? 7,
         createdAt: now,
         updatedAt: now,
       };
@@ -167,7 +202,8 @@ export const createCheckoutSession = async (req, res, next) => {
     });
 
     // Create Stripe Checkout Session
-    const clientBaseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    // Normalized CLIENT_URL (null in production when unset; see config/urls.js)
+    const clientBaseUrl = getClientBaseUrl();
     let checkoutUrl = '';
     let stripeSessionId = '';
 
@@ -308,20 +344,20 @@ export const cancelBooking = async (req, res, next) => {
       return sendError(res, `Cannot cancel a booking that is already ${booking.bookingStatus}`, 400);
     }
 
-    // Calculate days remaining until departure date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const depDate = new Date(booking.departureDate);
-    depDate.setHours(0, 0, 0, 0);
-
-    const diffTime = depDate.getTime() - today.getTime();
-    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const cutoffDays = booking.cancellationCutoffDays || 7;
+    // Days remaining until departure, in Manila calendar days (independent of server TZ)
+    const daysRemaining = daysBetweenDateStrs(todayInManila(), booking.departureDate);
+    const cutoffDays = booking.cancellationCutoffDays ?? 7;
 
     const isEligibleForAutoRefund = daysRemaining >= cutoffDays;
+    // Nothing to refund on an unpaid booking — always release its seats immediately
+    const cancelImmediately = isEligibleForAutoRefund || booking.paymentStatus !== 'Paid';
     const now = new Date().toISOString();
 
-    if (isEligibleForAutoRefund) {
+    if (!cancelImmediately && booking.cancellationRequested) {
+      return sendError(res, 'A cancellation request for this booking is already under review by our support team.', 409);
+    }
+
+    if (cancelImmediately) {
       // STEP 1 (atomic): claim the cancellation inside a transaction so a
       // concurrent/double cancel aborts here — prevents double seat release
       // and double Stripe refunds.
@@ -332,6 +368,11 @@ export const cancelBooking = async (req, res, next) => {
         const current = bDoc.data();
         if (['Cancelled', 'Completed', 'Rejected'].includes(current.bookingStatus)) {
           return { ok: false, reason: `already_${current.bookingStatus}` };
+        }
+        // Payment landed (webhook) between the pre-read and this transaction: the refund
+        // decision below was made on stale state — abort instead of keeping the money un-refunded.
+        if (current.paymentStatus !== booking.paymentStatus) {
+          return { ok: false, reason: 'state_changed' };
         }
 
         const dDoc = await t.get(depRef);
@@ -358,7 +399,21 @@ export const cancelBooking = async (req, res, next) => {
         if (claimed.reason === 'not_found') {
           return sendError(res, 'Booking not found', 404);
         }
+        if (claimed.reason === 'state_changed') {
+          return sendError(res, 'This booking was just updated (e.g. payment received). Please refresh and try again.', 409);
+        }
         return sendError(res, `Cannot cancel a booking that is already ${claimed.reason.replace('already_', '')}`, 400);
+      }
+
+      // Unpaid booking with an open Checkout session: expire it so the customer can't pay for a
+      // cancelled booking. (The webhook also refunds any payment that slips through.)
+      if (booking.paymentStatus !== 'Paid' && booking.stripeSessionId && isStripeInitialized && stripe) {
+        try {
+          await stripe.checkout.sessions.expire(booking.stripeSessionId);
+        } catch (expireErr) {
+          // Already expired/completed sessions throw — safe to ignore
+          console.warn(`[Cancel] Could not expire Stripe session ${booking.stripeSessionId}:`, expireErr.message);
+        }
       }
 
       // STEP 2: attempt the Stripe refund (only if actually paid).
@@ -577,6 +632,16 @@ export const getBookingById = async (req, res, next) => {
       }
     }
 
+    // Guides may only view bookings on departures they are assigned to
+    if (req.user.role === 'guide') {
+      const dDoc = booking.departureId
+        ? await db.collection(DEPARTURES_COLLECTION).doc(booking.departureId).get()
+        : null;
+      if (!dDoc?.exists || dDoc.data().assignedGuideId !== req.user.uid) {
+        return sendError(res, 'Unauthorized: Guides can only access bookings on their assigned departures.', 403);
+      }
+    }
+
     // Attach package itinerary details
     if (booking.packageId) {
       const pDoc = await db.collection(PACKAGES_COLLECTION).doc(booking.packageId).get();
@@ -643,9 +708,8 @@ export const getAllBookings = async (req, res, next) => {
     }
 
     bookings.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    bookings = bookings.slice(0, parseLimit(limit));
 
-    // In-memory text search
+    // In-memory text search (filters run BEFORE the limit so older matches aren't silently dropped)
     if (search && search.trim()) {
       const term = search.trim().toLowerCase();
       bookings = bookings.filter(
@@ -664,6 +728,8 @@ export const getAllBookings = async (req, res, next) => {
     if (rescheduleStatus) {
       bookings = bookings.filter((b) => b.rescheduleRequest?.status === rescheduleStatus);
     }
+
+    bookings = bookings.slice(0, parseLimit(limit));
 
     return sendSuccess(res, bookings, `Retrieved ${bookings.length} booking(s)`);
   } catch (error) {
@@ -721,6 +787,33 @@ export const supportUpdateBooking = async (req, res, next) => {
       }
     }
 
+    // Seat accounting: Cancelled/Rejected bookings have released their seats, so they
+    // cannot be silently reactivated (would oversell), and moving an active booking
+    // into Cancelled/Rejected must release its seats atomically.
+    const isTerminal = (s) => ['Cancelled', 'Rejected'].includes(s);
+    const statusChanging = Boolean(bookingStatus) && bookingStatus !== currentBooking.bookingStatus;
+    if (statusChanging && isTerminal(currentBooking.bookingStatus)) {
+      return sendError(
+        res,
+        `Cannot change the status of a ${currentBooking.bookingStatus} booking — its seats were already released. Create a new booking instead.`,
+        400
+      );
+    }
+    // Refund honesty: a PAID booking must be cancelled through the cancel / exception-refund
+    // endpoints (which call Stripe), never by a bare status flip that keeps the money.
+    if (statusChanging && isTerminal(bookingStatus) && currentBooking.paymentStatus === 'Paid') {
+      return sendError(
+        res,
+        'This booking is paid. Use the cancellation / exception-refund action so the customer is refunded.',
+        400
+      );
+    }
+    const releaseSeats = statusChanging && isTerminal(bookingStatus) && currentBooking.bookingStatus !== 'Completed';
+    const wantsReschedule = Boolean(rescheduleDepartureId) && rescheduleDepartureId !== currentBooking.departureId;
+    if (wantsReschedule && (isTerminal(currentBooking.bookingStatus) || currentBooking.bookingStatus === 'Completed' || releaseSeats)) {
+      return sendError(res, 'Only active (Pending/Confirmed) bookings can be rescheduled', 400);
+    }
+
     const now = new Date().toISOString();
     const updates = { updatedAt: now };
 
@@ -742,21 +835,33 @@ export const supportUpdateBooking = async (req, res, next) => {
     }
 
     // Handle departure rescheduling
-    if (rescheduleDepartureId && rescheduleDepartureId !== currentBooking.departureId) {
+    if (wantsReschedule) {
       const oldDepRef = db.collection(DEPARTURES_COLLECTION).doc(currentBooking.departureId);
       const newDepRef = db.collection(DEPARTURES_COLLECTION).doc(rescheduleDepartureId);
 
       await db.runTransaction(async (t) => {
+        // Re-read the booking inside the transaction so a concurrent cancel/reschedule
+        // can't cause a double seat release / double transfer.
+        const bDoc = await t.get(bookingRef);
         const oldDoc = await t.get(oldDepRef);
         const newDoc = await t.get(newDepRef);
 
+        const cur = bDoc.exists ? bDoc.data() : null;
+        if (!cur || !['Pending', 'Confirmed'].includes(cur.bookingStatus) || cur.departureId !== currentBooking.departureId) {
+          throw httpError('Booking changed while rescheduling (cancelled or already moved). Please refresh and retry.', 409);
+        }
+
         if (!newDoc.exists) {
-          throw new Error('Target departure schedule does not exist');
+          throw httpError('Target departure schedule does not exist', 404);
         }
 
         const newData = newDoc.data();
+        // Price integrity / Rule D: a booking may only move between departures of its own package
+        if (newData.packageId !== currentBooking.packageId) {
+          throw httpError('Target departure does not belong to the same tour package', 400);
+        }
         if (newData.status !== 'open') {
-          throw new Error(`Target departure is not open (status: ${newData.status})`);
+          throw httpError(`Target departure is not open (status: ${newData.status})`, 409);
         }
 
         // Rule D: Booking Deadline Check on target departure
@@ -768,12 +873,12 @@ export const supportUpdateBooking = async (req, res, next) => {
             newData.bookingDeadlineHours !== undefined ? Number(newData.bookingDeadlineHours) : 24
           );
         if (now > targetDeadline) {
-          throw new Error('Target departure booking cutoff has already passed (Rule D).');
+          throw httpError('Target departure booking cutoff has already passed (Rule D).', 409);
         }
 
         const remainingInNew = (newData.capacity || 0) - (newData.bookedCount || 0);
         if (currentBooking.numberOfTravelers > remainingInNew) {
-          throw new Error(`Insufficient capacity on target departure (${remainingInNew} slot(s) available)`);
+          throw httpError(`Insufficient capacity on target departure (${remainingInNew} slot(s) available)`, 409);
         }
 
         // Adjust seat counts
@@ -810,6 +915,35 @@ export const supportUpdateBooking = async (req, res, next) => {
         relatedBookingId: id,
         createdAt: now,
       });
+    } else if (releaseSeats) {
+      await db.runTransaction(async (t) => {
+        const bDoc = await t.get(bookingRef);
+        const cur = bDoc.exists ? bDoc.data() : null;
+        if (!cur || isTerminal(cur.bookingStatus)) {
+          throw httpError('Booking was already cancelled/rejected — seats not released again.', 409);
+        }
+        if (cur.paymentStatus === 'Paid') {
+          throw httpError('Booking was just paid. Use the cancellation / exception-refund action instead.', 409);
+        }
+        const depRef = db.collection(DEPARTURES_COLLECTION).doc(cur.departureId);
+        const dDoc = await t.get(depRef);
+        if (dDoc.exists) {
+          t.update(depRef, {
+            bookedCount: Math.max(0, (dDoc.data().bookedCount || 0) - (cur.numberOfTravelers || 0)),
+            updatedAt: now,
+          });
+        }
+        t.update(bookingRef, { ...updates, cancelledAt: now, refundStatus: 'not_applicable' });
+      });
+
+      // Close any open Checkout session so the customer can't pay for the cancelled booking
+      if (currentBooking.stripeSessionId && isStripeInitialized && stripe) {
+        try {
+          await stripe.checkout.sessions.expire(currentBooking.stripeSessionId);
+        } catch (expireErr) {
+          console.warn(`[SupportUpdate] Could not expire Stripe session ${currentBooking.stripeSessionId}:`, expireErr.message);
+        }
+      }
     } else {
       await bookingRef.update(updates);
     }
@@ -858,6 +992,10 @@ export const processExceptionRefund = async (req, res, next) => {
       if (['Cancelled', 'Completed', 'Rejected'].includes(current.bookingStatus)) {
         return { ok: false, reason: current.bookingStatus };
       }
+      // Refund decision below uses the pre-read paymentStatus — abort if it changed meanwhile
+      if (current.paymentStatus !== booking.paymentStatus) {
+        return { ok: false, reason: 'state_changed' };
+      }
 
       const dDoc = await t.get(depRef);
       if (dDoc.exists) {
@@ -882,6 +1020,9 @@ export const processExceptionRefund = async (req, res, next) => {
     if (!claimed.ok) {
       if (claimed.reason === 'not_found') {
         return sendError(res, 'Booking not found', 404);
+      }
+      if (claimed.reason === 'state_changed') {
+        return sendError(res, 'Booking payment state changed during processing. Please refresh and retry.', 409);
       }
       return sendError(res, `Booking is already ${claimed.reason} — refund not processed again.`, 400);
     }
@@ -1022,6 +1163,11 @@ export const requestReschedule = async (req, res, next) => {
       return sendError(res, 'Unauthorized: You can only reschedule your own bookings', 403);
     }
 
+    // Rule D: operators may only act on bookings for their own packages
+    if (req.user.role === 'operator' && !(await operatorOwnsPackage(req.user.uid, booking.packageId))) {
+      return sendError(res, 'Forbidden: You can only manage bookings for your own packages (Rule D)', 403);
+    }
+
     if (['Cancelled', 'Completed', 'Rejected'].includes(booking.bookingStatus)) {
       return sendError(res, `Cannot reschedule a booking that is ${booking.bookingStatus}`, 400);
     }
@@ -1079,14 +1225,8 @@ export const requestReschedule = async (req, res, next) => {
     }
 
     // Policy Cutoff calculation for original departure
-    const todayObj = new Date();
-    todayObj.setHours(0, 0, 0, 0);
-    const depDateObj = new Date(booking.departureDate);
-    depDateObj.setHours(0, 0, 0, 0);
-
-    const diffMs = depDateObj.getTime() - todayObj.getTime();
-    const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    const cutoffDays = booking.cancellationCutoffDays || 7;
+    const daysRemaining = daysBetweenDateStrs(todayInManila(), booking.departureDate);
+    const cutoffDays = booking.cancellationCutoffDays ?? 7;
     const withinCutoff = daysRemaining >= cutoffDays;
 
     const rescheduleRequestData = {
@@ -1164,6 +1304,10 @@ export const cancelRescheduleRequest = async (req, res, next) => {
       return sendError(res, 'Unauthorized', 403);
     }
 
+    if (req.user.role === 'operator' && !(await operatorOwnsPackage(req.user.uid, booking.packageId))) {
+      return sendError(res, 'Forbidden: You can only manage bookings for your own packages (Rule D)', 403);
+    }
+
     if (!booking.rescheduleRequest || booking.rescheduleRequest.status !== 'pending') {
       return sendError(res, 'No active pending reschedule request found for this booking', 400);
     }
@@ -1223,16 +1367,33 @@ export const approveRescheduleRequest = async (req, res, next) => {
     const nowIso = new Date().toISOString();
 
     await db.runTransaction(async (t) => {
+      // Re-read the booking inside the transaction: a double-approve or a concurrent
+      // cancellation must not move seats twice / move seats for a cancelled booking.
+      const bDoc = await t.get(bookingRef);
       const oldDoc = await t.get(oldDepRef);
       const newDoc = await t.get(newDepRef);
 
+      const cur = bDoc.exists ? bDoc.data() : null;
+      if (
+        !cur ||
+        cur.rescheduleRequest?.status !== 'pending' ||
+        cur.rescheduleRequest?.targetDepartureId !== reqData.targetDepartureId ||
+        cur.departureId !== booking.departureId ||
+        !['Pending', 'Confirmed'].includes(cur.bookingStatus)
+      ) {
+        throw httpError('This reschedule request is no longer pending or the booking is no longer active.', 409);
+      }
+
       if (!newDoc.exists) {
-        throw new Error('Target departure schedule does not exist');
+        throw httpError('Target departure schedule does not exist', 404);
       }
 
       const targetDep = newDoc.data();
+      if (targetDep.packageId !== booking.packageId) {
+        throw httpError('Target departure does not belong to the same tour package', 400);
+      }
       if (targetDep.status !== 'open') {
-        throw new Error(`Target departure is not open for reservations (status: ${targetDep.status})`);
+        throw httpError(`Target departure is not open for reservations (status: ${targetDep.status})`, 409);
       }
 
       // Check Rule D booking deadline
@@ -1244,12 +1405,12 @@ export const approveRescheduleRequest = async (req, res, next) => {
           targetDep.bookingDeadlineHours !== undefined ? Number(targetDep.bookingDeadlineHours) : 24
         );
       if (nowIso > targetDeadline) {
-        throw new Error('Target departure booking cutoff has already passed (Rule D).');
+        throw httpError('Target departure booking cutoff has already passed (Rule D).', 409);
       }
 
       const remainingInNew = (targetDep.capacity || 0) - (targetDep.bookedCount || 0);
       if (booking.numberOfTravelers > remainingInNew) {
-        throw new Error(`Insufficient capacity on target departure (${remainingInNew} slot(s) remaining)`);
+        throw httpError(`Insufficient capacity on target departure (${remainingInNew} slot(s) remaining)`, 409);
       }
 
       // Decrement bookedCount on old departure
@@ -1269,11 +1430,12 @@ export const approveRescheduleRequest = async (req, res, next) => {
 
       // Update booking
       t.update(bookingRef, {
+        // Use the departure's CURRENT schedule (the request snapshot may be stale if it was edited)
         departureId: reqData.targetDepartureId,
-        departureDate: reqData.targetDepartureDate,
-        departureTime: reqData.targetDepartureTime || '07:00 AM',
-        returnDate: reqData.targetReturnDate,
-        meetingPoint: reqData.targetMeetingPoint,
+        departureDate: targetDep.departureDate,
+        departureTime: targetDep.departureTime || '07:00 AM',
+        returnDate: targetDep.returnDate || targetDep.departureDate,
+        meetingPoint: targetDep.meetingPoint || 'Designated Harbor / Meeting Terminal',
         rescheduledAt: nowIso,
         'rescheduleRequest.status': 'approved',
         'rescheduleRequest.reviewedBy': req.user.uid,

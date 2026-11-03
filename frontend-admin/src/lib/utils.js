@@ -17,7 +17,11 @@ export function formatCurrency(amount) {
 
 export function formatDate(dateString) {
   if (!dateString) return 'N/A';
-  const date = new Date(dateString);
+  // Business dates are 'YYYY-MM-DD' (Asia/Manila). new Date('YYYY-MM-DD') parses as UTC
+  // midnight, which shows the previous day in negative-offset time zones — parse as local.
+  const m = typeof dateString === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  const date = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(dateString);
+  if (Number.isNaN(date.getTime())) return 'N/A';
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

@@ -41,7 +41,8 @@ const navigationSections = [
         name: 'Dashboard',
         to: '/dashboard',
         icon: LayoutDashboard,
-        roles: ['admin', 'coordinator', 'support', 'operator'],
+        // GET /admin/dashboard is admin-only; operators use /operators/dashboard
+        roles: ['admin', 'operator'],
       },
     ],
   },

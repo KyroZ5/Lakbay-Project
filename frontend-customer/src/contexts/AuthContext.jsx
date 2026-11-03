@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -14,16 +14,34 @@ import { notify } from '../lib/notify';
 
 const AuthContext = createContext(null);
 
+const DEACTIVATED_CODE = 'account/deactivated';
+const isDeactivated = (data) => data?.accountStatus === 'deactivated' || data?.accountStatus === 'disabled';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  // True from a deliberate logout until the next sign-in; lets ProtectedRoute send the user
+  // home instead of to /login?redirect=… while the sign-out and navigation race.
+  const [signedOutByUser, setSignedOutByUser] = useState(false);
+  // While register() is creating the profile, the listener must not fetch/auto-create it
+  const registeringRef = useRef(false);
 
   // Sync auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
+        setSignedOutByUser(false);
+        if (registeringRef.current) {
+          setLoading(false);
+          return;
+        }
+        // Ignore results that arrive after logout or an account switch
+        const isCurrent = () => auth.currentUser?.uid === firebaseUser.uid;
+        const setProfileIfCurrent = (value) => {
+          if (isCurrent()) setProfile(value);
+        };
         try {
           // Fetch user document from Firestore users collection
           const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -32,7 +50,7 @@ export const AuthProvider = ({ children }) => {
           if (userSnap.exists()) {
             const data = userSnap.data();
             // Block deactivated accounts
-            if (data.accountStatus === 'deactivated' || data.accountStatus === 'disabled') {
+            if (isDeactivated(data)) {
               await signOut(auth);
               setUser(null);
               setProfile(null);
@@ -40,14 +58,14 @@ export const AuthProvider = ({ children }) => {
               setLoading(false);
               return;
             }
-            setProfile(data);
+            setProfileIfCurrent(data);
           } else {
             // Document might be synced via API
             try {
               const res = await axiosClient.get('/customers/profile');
-              setProfile(res.data || res);
+              setProfileIfCurrent(res.data || res);
             } catch {
-              setProfile({
+              setProfileIfCurrent({
                 uid: firebaseUser.uid,
                 fullName: firebaseUser.displayName || 'Customer',
                 email: firebaseUser.email,
@@ -60,9 +78,9 @@ export const AuthProvider = ({ children }) => {
           console.warn('[AuthContext] Firestore profile fetch error; falling back to API/auth profile:', err.message);
           try {
             const res = await axiosClient.get('/customers/profile');
-            setProfile(res.data || res);
+            setProfileIfCurrent(res.data || res);
           } catch {
-            setProfile({
+            setProfileIfCurrent({
               uid: firebaseUser.uid,
               fullName: firebaseUser.displayName || 'Customer',
               email: firebaseUser.email,
@@ -86,11 +104,24 @@ export const AuthProvider = ({ children }) => {
    * Public registration always enforces 'customer' role
    */
   const register = async (email, password, fullName, phone) => {
+    registeringRef.current = true;
+    try {
+      return await createAccount(email, password, fullName, phone);
+    } finally {
+      registeringRef.current = false;
+    }
+  };
+
+  const createAccount = async (email, password, fullName, phone) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const registeredUser = userCredential.user;
 
-    // Update Firebase display name
-    await updateFirebaseProfile(registeredUser, { displayName: fullName });
+    // Update Firebase display name — the account already exists, so a failure here must not fail registration
+    try {
+      await updateFirebaseProfile(registeredUser, { displayName: fullName });
+    } catch (err) {
+      console.warn('[AuthContext] Could not set display name:', err.message);
+    }
 
     const now = new Date().toISOString();
     const customerData = {
@@ -135,13 +166,20 @@ export const AuthProvider = ({ children }) => {
 
       if (userSnap.exists()) {
         const data = userSnap.data();
-        if (data.accountStatus === 'deactivated' || data.accountStatus === 'disabled') {
-          await signOut(auth);
-          throw new Error('Your account has been deactivated. Please contact support.');
+        if (isDeactivated(data)) {
+          const deactivated = new Error('Your account has been deactivated. Please contact support.');
+          deactivated.code = DEACTIVATED_CODE;
+          throw deactivated;
         }
         setProfile(data);
       }
     } catch (err) {
+      if (err.code === DEACTIVATED_CODE) {
+        await signOut(auth);
+        setUser(null);
+        setProfile(null);
+        throw err;
+      }
       console.warn('[AuthContext] Firestore read notice during login:', err.message);
       setProfile({
         uid: loggedInUser.uid,
@@ -159,6 +197,7 @@ export const AuthProvider = ({ children }) => {
    * Log out current user
    */
   const logout = async () => {
+    setSignedOutByUser(true);
     await signOut(auth);
     setUser(null);
     setProfile(null);
@@ -168,7 +207,16 @@ export const AuthProvider = ({ children }) => {
    * Send password reset email
    */
   const resetPassword = async (email) => {
-    return sendPasswordResetEmail(auth, email);
+    // Continue URL brings the user back to the app after Firebase's hosted reset page.
+    try {
+      return await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
+    } catch (err) {
+      // Domain not in Firebase's authorized list — fall back to the default email without a continue link.
+      if (err.code === 'auth/unauthorized-continue-uri' || err.code === 'auth/invalid-continue-uri') {
+        return sendPasswordResetEmail(auth, email);
+      }
+      throw err;
+    }
   };
 
   const value = {
@@ -176,6 +224,7 @@ export const AuthProvider = ({ children }) => {
     profile,
     role: profile?.role || 'customer',
     loading,
+    signedOutByUser,
     register,
     login,
     logout,

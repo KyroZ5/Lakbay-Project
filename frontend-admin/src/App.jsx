@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, useNavigate } from 'react-router-dom';
+import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { StaffAuthProvider } from './contexts/StaffAuthContext';
 import { AdminRoutes } from './routes/AdminRoutes';
 import { Toaster } from './components/ui/sonner';
@@ -17,15 +17,18 @@ export default function App() {
 
 function AppInner() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const onSessionExpired = () => {
       signOut(auth);
-      navigate('/login', { replace: true });
+      // StaffLoginPage reads state.from to return the user after signing back in
+      const state = location.pathname === '/login' ? undefined : { from: location };
+      navigate('/login', { replace: true, state });
     };
     window.addEventListener('auth:session-expired', onSessionExpired);
     return () => window.removeEventListener('auth:session-expired', onSessionExpired);
-  }, [navigate, auth]);
+  }, [navigate, location]);
 
   return (
     <TooltipProvider delayDuration={300}>

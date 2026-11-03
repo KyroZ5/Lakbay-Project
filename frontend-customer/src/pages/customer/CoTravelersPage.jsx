@@ -146,6 +146,7 @@ export const CoTravelersPage = () => {
     <div className="space-y-6 max-w-4xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="mb-2 h-1.5 w-14 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
           <h1 className="text-3xl font-black text-slate-900 font-heading">
             Saved Co-Travelers
           </h1>

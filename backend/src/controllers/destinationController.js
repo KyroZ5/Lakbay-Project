@@ -4,6 +4,7 @@ import { logActivity } from '../services/auditService.js';
 import { geocodeAddress } from '../services/locationService.js';
 import { getCurrentWeather } from '../services/weatherService.js';
 import { parseLimit } from '../utils/query.js';
+import { enrichPackagePricing } from './packageController.js';
 
 const COLLECTION = 'destinations';
 
@@ -32,11 +33,13 @@ export const getDestinations = async (req, res, next) => {
       query = query.where('category', '==', category);
     }
 
-    const snapshot = await query.limit(parseLimit(limit)).get();
+    // NOTE: limit is applied AFTER in-memory search/sort; limiting the Firestore
+    // query first would silently drop matches beyond the first N documents.
+    const snapshot = await query.get();
     let destinations = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
     // In-memory text search filter for flexible multi-field matching
-    if (search && search.trim()) {
+    if (typeof search === 'string' && search.trim()) {
       const term = search.trim().toLowerCase();
       destinations = destinations.filter(
         (dest) =>
@@ -59,6 +62,8 @@ export const getDestinations = async (req, res, next) => {
         return (b.createdAt || '').localeCompare(a.createdAt || '');
       });
     }
+
+    destinations = destinations.slice(0, parseLimit(limit));
 
     return sendSuccess(res, destinations, `Retrieved ${destinations.length} destination(s)`);
   } catch (error) {
@@ -110,7 +115,10 @@ export const getDestinationById = async (req, res, next) => {
       packageQuery = packageQuery.where('isPublished', '==', true);
     }
     const pkgSnapshot = await packageQuery.get();
-    destination.relatedPackages = pkgSnapshot.docs.map((p) => ({ id: p.id, ...p.data() }));
+    // Public view hides unapproved packages; pricing is enriched so discounts display correctly
+    destination.relatedPackages = pkgSnapshot.docs
+      .map((p) => enrichPackagePricing({ id: p.id, ...p.data() }))
+      .filter((pkg) => isStaff || !pkg.approvalStatus || pkg.approvalStatus === 'approved');
 
     // Fetch current weather preview if coordinates exist
     if (destination.coordinates?.lat && destination.coordinates?.lng) {
@@ -145,9 +153,10 @@ export const createDestination = async (req, res, next) => {
       isFeatured = false,
     } = req.body;
 
-    if (!name) {
+    if (typeof name !== 'string' || !name.trim()) {
       return sendError(res, 'Destination name is required', 400);
     }
+    const str = (v, def = '') => (typeof v === 'string' ? v : def);
 
     // Auto-resolve coordinates if missing or incomplete
     let finalCoordinates = coordinates;
@@ -159,14 +168,14 @@ export const createDestination = async (req, res, next) => {
     const now = new Date().toISOString();
     const destinationData = {
       name: name.trim(),
-      country: country.trim(),
-      region: region.trim(),
-      location: location.trim(),
+      country: str(country, 'Philippines').trim(),
+      region: str(region).trim(),
+      location: str(location).trim(),
       coordinates: finalCoordinates,
-      description,
+      description: str(description),
       recommendedActivities: Array.isArray(recommendedActivities) ? recommendedActivities : [],
       imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
-      category,
+      category: str(category, 'Island'),
       isPublished: Boolean(isPublished),
       isFeatured: Boolean(isFeatured),
       createdAt: now,
@@ -204,9 +213,49 @@ export const updateDestination = async (req, res, next) => {
       return sendError(res, 'Destination not found', 404);
     }
 
-    const updates = { ...req.body };
-    delete updates.id;
-    delete updates.createdAt;
+    // SECURITY: explicit field allowlist — never spread raw req.body into a
+    // Firestore write (AGENTS.md invariant 4).
+    const UPDATABLE_FIELDS = [
+      'name',
+      'country',
+      'region',
+      'location',
+      'coordinates',
+      'description',
+      'recommendedActivities',
+      'imageUrls',
+      'category',
+      'isPublished',
+      'isFeatured',
+    ];
+    const updates = {};
+    for (const field of UPDATABLE_FIELDS) {
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
+    }
+    for (const field of ['name', 'country', 'region', 'location', 'description', 'category']) {
+      if (updates[field] !== undefined) {
+        if (typeof updates[field] !== 'string') {
+          return sendError(res, `${field} must be a string`, 400);
+        }
+        updates[field] = field === 'description' ? updates[field] : updates[field].trim();
+      }
+    }
+    if (updates.name !== undefined && !updates.name) {
+      return sendError(res, 'Destination name cannot be empty', 400);
+    }
+    for (const field of ['recommendedActivities', 'imageUrls']) {
+      if (updates[field] !== undefined && !Array.isArray(updates[field])) {
+        return sendError(res, `${field} must be an array`, 400);
+      }
+    }
+    if (updates.isPublished !== undefined) updates.isPublished = updates.isPublished === true || updates.isPublished === 'true';
+    if (updates.isFeatured !== undefined) updates.isFeatured = updates.isFeatured === true || updates.isFeatured === 'true';
+    if (updates.coordinates !== undefined) {
+      const lat = Number(updates.coordinates?.lat);
+      const lng = Number(updates.coordinates?.lng);
+      updates.coordinates = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? { lat, lng } : null;
+      if (!updates.coordinates) delete updates.coordinates;
+    }
     updates.updatedAt = new Date().toISOString();
 
     // Re-geocode if location or name changed and coordinates were not explicitly provided

@@ -4,6 +4,29 @@ import { logActivity } from '../services/auditService.js';
 
 const COLLECTION = 'promotions';
 
+const TEXT_FIELDS = ['title', 'subtitle', 'bannerImageUrl', 'badgeText', 'actionText', 'actionUrl', 'discountHighlight'];
+
+// Only relative app paths or http(s) URLs: blocks javascript:/data: links
+// that would execute when rendered as a banner href/src.
+const isSafeUrl = (url) => !url || /^\/(?!\/)/.test(url) || /^https?:\/\//i.test(url);
+
+const toBool = (v) => v === true || v === 'true' || v === 1 || v === '1';
+
+const validatePromoInput = (body) => {
+  for (const field of TEXT_FIELDS) {
+    if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
+      return `${field} must be text`;
+    }
+  }
+  if (typeof body.actionUrl === 'string' && !isSafeUrl(body.actionUrl.trim())) {
+    return 'actionUrl must be a relative path (e.g. /packages) or an http(s) URL';
+  }
+  if (typeof body.bannerImageUrl === 'string' && !isSafeUrl(body.bannerImageUrl.trim())) {
+    return 'bannerImageUrl must be an http(s) URL or relative path';
+  }
+  return null;
+};
+
 /**
  * 1. Public: Get all active published promotional campaign banners
  * (GET /api/promotions)
@@ -61,9 +84,14 @@ export const createPromotion = async (req, res, next) => {
       badgeText = 'Special Promo',
       actionText = 'Explore Tours',
       actionUrl = '/packages',
+      discountHighlight = '',
       isPublished = true,
     } = req.body;
 
+    const invalid = validatePromoInput(req.body);
+    if (invalid) {
+      return sendError(res, invalid, 400);
+    }
     if (!title || !title.trim()) {
       return sendError(res, 'Promotion title is required', 400);
     }
@@ -76,7 +104,9 @@ export const createPromotion = async (req, res, next) => {
       badgeText: (badgeText || 'Special Promo').trim(),
       actionText: (actionText || 'Explore Tours').trim(),
       actionUrl: (actionUrl || '/packages').trim(),
-      isPublished: Boolean(isPublished),
+      // Short highlight shown next to the badge on the customer homepage (e.g. "Up to 15% off")
+      discountHighlight: (discountHighlight || '').trim(),
+      isPublished: toBool(isPublished),
       createdBy: req.user.uid,
       createdAt: now,
       updatedAt: now,
@@ -118,6 +148,7 @@ export const updatePromotion = async (req, res, next) => {
       badgeText,
       actionText,
       actionUrl,
+      discountHighlight,
       isPublished,
     } = req.body;
 
@@ -128,14 +159,23 @@ export const updatePromotion = async (req, res, next) => {
       return sendError(res, 'Promotion not found', 404);
     }
 
+    const invalid = validatePromoInput(req.body);
+    if (invalid) {
+      return sendError(res, invalid, 400);
+    }
+    if (title !== undefined && !(title || '').trim()) {
+      return sendError(res, 'Promotion title cannot be empty', 400);
+    }
+
     const updates = { updatedAt: new Date().toISOString() };
     if (title !== undefined) updates.title = title.trim();
-    if (subtitle !== undefined) updates.subtitle = subtitle.trim();
-    if (bannerImageUrl !== undefined) updates.bannerImageUrl = bannerImageUrl.trim();
-    if (badgeText !== undefined) updates.badgeText = badgeText.trim();
-    if (actionText !== undefined) updates.actionText = actionText.trim();
-    if (actionUrl !== undefined) updates.actionUrl = actionUrl.trim();
-    if (isPublished !== undefined) updates.isPublished = Boolean(isPublished);
+    if (subtitle !== undefined) updates.subtitle = (subtitle || '').trim();
+    if (bannerImageUrl !== undefined) updates.bannerImageUrl = (bannerImageUrl || '').trim();
+    if (badgeText !== undefined) updates.badgeText = (badgeText || '').trim();
+    if (actionText !== undefined) updates.actionText = (actionText || '').trim();
+    if (actionUrl !== undefined) updates.actionUrl = (actionUrl || '').trim();
+    if (discountHighlight !== undefined) updates.discountHighlight = (discountHighlight || '').trim();
+    if (isPublished !== undefined) updates.isPublished = toBool(isPublished);
 
     await docRef.update(updates);
     const updated = await docRef.get();

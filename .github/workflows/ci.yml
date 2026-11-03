@@ -16,9 +16,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
+          # No lockfile at the repo root: point the cache at each app's lockfile
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend-customer/package-lock.json
+            frontend-admin/package-lock.json
 
+      # npm install (not npm ci): lockfiles are generated on Windows and may
+      # lack Linux-only optional deps; keep this consistent across all workflows.
       - name: Install backend dependencies
         run: npm install
         working-directory: backend
@@ -31,34 +38,32 @@ jobs:
         run: npm install
         working-directory: frontend-admin
 
+      # node --check only checks its FIRST argument, so run it once per file.
       - name: Backend syntax check
-        run: find src -name '*.js' -exec node --check {} +
+        run: find src api -name '*.js' -print0 | xargs -0 -n1 node --check
         working-directory: backend
 
+      # Catches broken ESM imports that node --check cannot see.
+      # VERCEL=1 skips app.listen so the process exits.
+      - name: Backend import smoke test
+        run: node -e "import('./api/index.js').then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); })"
+        working-directory: backend
+        env:
+          VERCEL: '1'
+          NODE_ENV: test
+
+      # CI builds only check that the bundles compile; public placeholder values
+      # are fine here (real values come from each Vercel project's env vars).
       - name: Build customer frontend
         run: npm run build
         working-directory: frontend-customer
         env:
-          VITE_API_BASE_URL: https://api.lakbay.ph/api
-          VITE_ENABLE_DEMO_LOGIN: 'false'
-          VITE_ADMIN_URL: https://admin.lakbay.ph
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_API_BASE_URL: /api
+          VITE_ADMIN_URL: http://localhost:3001
 
       - name: Build admin frontend
         run: npm run build
         working-directory: frontend-admin
         env:
-          VITE_API_BASE_URL: https://api.lakbay.ph/api
+          VITE_API_BASE_URL: /api
           VITE_ENABLE_DEMO_LOGIN: 'false'
-          VITE_ADMIN_URL: https://admin.lakbay.ph
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}

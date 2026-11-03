@@ -11,6 +11,15 @@ export const todayInManila = () => {
   return new Date().toLocaleDateString('en-CA', { timeZone: BUSINESS_TZ });
 };
 
+/** Whole calendar days from `fromStr` to `toStr` (both YYYY-MM-DD); negative if `toStr` is earlier. */
+export const daysBetweenDateStrs = (fromStr, toStr) => {
+  const toUtc = (s) => {
+    const [y, m, d] = String(s).slice(0, 10).split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtc(toStr) - toUtc(fromStr)) / 86400000);
+};
+
 /** Add N days to a YYYY-MM-DD date string (timezone-safe, no Date parsing). */
 export const addDaysToDateStr = (dateStr, days) => {
   const [y, m, d] = String(dateStr).split('-').map(Number);

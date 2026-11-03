@@ -36,20 +36,26 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const config = error.config || {};
 
-    if (error.response?.status === 401 && !config._retried) {
+    const status = error.response?.status;
+
+    // First 401: force-refresh the ID token once and retry
+    if (status === 401 && !config._retried && auth.currentUser) {
+      config._retried = true;
       try {
-        config._retried = true;
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          await currentUser.getIdToken(true); // force token refresh
-          config.headers.Authorization = `Bearer ${await currentUser.getIdToken()}`;
-          return axiosClient(config);
-        }
+        await auth.currentUser.getIdToken(true);
+        config.headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`;
+        return axiosClient(config);
       } catch (refreshErr) {
         // fall through to session expiry handling below
       }
+    }
+
+    // Persistent 401, or the account was deactivated mid-session (403): end the session.
+    // Only a signed-in user's session can expire; anonymous 401s just reject.
+    const serverMessage = error.response?.data?.message || '';
+    const deactivated = status === 403 && /deactivat/i.test(serverMessage);
+    if ((status === 401 || deactivated) && auth.currentUser) {
       window.dispatchEvent(new Event('auth:session-expired'));
-      return Promise.reject(error);
     }
 
     const message =

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { bookingsApi } from '../../api/bookingsApi';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -9,13 +9,39 @@ import { EmptyState, ErrorState } from '../../components/common/DataStates';
 import { TableRowsSkeleton } from '../../components/common/Skeletons';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { getErrorMessage } from '../../lib/notify';
-import { Calendar, ArrowRight } from 'lucide-react';
+import { Calendar, ArrowRight, CheckCircle2, Clock, X } from 'lucide-react';
 
 export const MyBookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Return params from Stripe checkout (success_url / mock flow) or a manual reservation
+  const returnRef = searchParams.get('ref');
+  const returnBanner = !returnRef
+    ? null
+    : searchParams.get('status') === 'success'
+      ? {
+          tone: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+          icon: CheckCircle2,
+          text: `Payment received for booking ${returnRef}. It will show as Confirmed once Stripe verifies the payment.`,
+        }
+      : searchParams.get('mock_payment') === 'pending'
+        ? {
+            tone: 'border-amber-200 bg-amber-50 text-amber-900',
+            icon: Clock,
+            text: `Payment pending for booking ${returnRef}. Complete payment to secure your seats.`,
+          }
+        : searchParams.get('status') === 'reserved'
+          ? {
+              tone: 'border-sky-200 bg-sky-50 text-sky-900',
+              icon: CheckCircle2,
+              text: `Seats reserved for booking ${returnRef}.`,
+            }
+          : null;
+  const dismissReturnBanner = () => setSearchParams({}, { replace: true });
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -77,6 +103,7 @@ export const MyBookingsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          <div className="mb-2 h-1.5 w-14 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
           <h1 className="text-3xl font-black text-slate-900 font-heading">My Tour Bookings</h1>
           <p className="mt-1 text-sm text-slate-500">
             View booking references, track departure schedules, and inspect payment receipts.
@@ -102,6 +129,21 @@ export const MyBookingsPage = () => {
           ))}
         </div>
       </div>
+
+      {returnBanner && (
+        <div role="status" className={`flex items-start gap-3 rounded-xl border p-4 text-sm font-medium ${returnBanner.tone}`}>
+          <returnBanner.icon className="h-5 w-5 shrink-0 mt-0.5" />
+          <p className="flex-1">{returnBanner.text}</p>
+          <button
+            type="button"
+            onClick={dismissReturnBanner}
+            aria-label="Dismiss message"
+            className="rounded-full p-0.5 opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {error && <ErrorState message={error} onRetry={fetchBookings} retrying={loading} />}
 
@@ -150,7 +192,7 @@ export const MyBookingsPage = () => {
                   />
                 ) : (
                   bookings.map((b) => (
-                    <TableRow key={b.id}>
+                    <TableRow key={b.id} className={returnRef && b.bookingReference === returnRef ? 'bg-emerald-50/70' : undefined}>
                       <TableCell className="font-mono text-xs font-bold text-slate-800">
                         {b.bookingReference}
                       </TableCell>

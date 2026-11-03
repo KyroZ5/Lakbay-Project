@@ -8,9 +8,28 @@ on:
       - '.github/workflows/deploy-admin.yml'
   workflow_dispatch:
 
+# Prebuilt deploy flow (https://vercel.com/kb/guide/how-can-i-use-github-actions-with-vercel):
+# env vars and project settings come from the Vercel project via 'vercel pull',
+# the build runs here with 'vercel build', and the output is uploaded as-is.
+# Do NOT also enable the Vercel Git integration for this project, or every push deploys twice.
+#
+# The Vercel CLI steps run from the REPO ROOT: the Vercel project's Root Directory
+# must be set to 'frontend-admin' (Settings > Build and Deployment), and the CLI applies it.
+# Running the CLI inside frontend-admin/ with Root Directory set would resolve frontend-admin/frontend-admin.
+
+concurrency:
+  group: deploy-admin
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+    defaults:
+      run:
+        working-directory: frontend-admin
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,33 +37,25 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: frontend-admin
-
-      - name: Build frontend
-        run: npm run build
-        working-directory: frontend-admin
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_ENABLE_DEMO_LOGIN: ${{ secrets.VITE_ENABLE_DEMO_LOGIN }}
-          VITE_ADMIN_URL: ${{ secrets.VITE_ADMIN_URL }}
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          cache-dependency-path: frontend-admin/package-lock.json
 
       - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+        run: npm install -g vercel@63.1.2
 
-      - name: Deploy to Vercel Production
-        run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
-        working-directory: frontend-admin
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+      # VITE_* values are NOT passed from GitHub secrets: 'vercel pull' writes the
+      # Vercel project's Production env to .vercel/.env.production.local and
+      # 'vercel build' bakes them into the bundle (vite.config.js fails the build
+      # if any required VITE_* value is missing).
+      - name: Pull Vercel project settings and env (production)
+        working-directory: .
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build with Vercel
+        working-directory: .
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy prebuilt output to production
+        working-directory: .
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

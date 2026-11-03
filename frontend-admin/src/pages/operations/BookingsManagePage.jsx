@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../../api/adminApi';
+import { useStaffAuth } from '../../contexts/StaffAuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -48,6 +49,9 @@ const DEFAULT_RESCHEDULE_REJECT_REASON =
   'Unable to accommodate departure change due to guide or boat capacity constraints.';
 
 export const BookingsManagePage = () => {
+  const { role } = useStaffAuth();
+  // Backend only lets support/admin change paymentStatus (403 for others)
+  const canEditPayment = role === 'support' || role === 'admin';
   const [bookings, setBookings] = useState([]);
   const [departures, setDepartures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +85,7 @@ export const BookingsManagePage = () => {
       const res = await adminApi.getAllBookings({
         bookingStatus: bookingStatusFilter || undefined,
         paymentStatus: paymentStatusFilter || undefined,
+        limit: 200,
       });
       setBookings(res.data || res || []);
     } catch (err) {
@@ -105,7 +110,7 @@ export const BookingsManagePage = () => {
   const openBookingModal = async (booking) => {
     setSelectedBooking(booking);
     setEditBookingStatus(booking.bookingStatus || 'Confirmed');
-    setEditPaymentStatus(booking.paymentStatus || 'Paid');
+    setEditPaymentStatus(booking.paymentStatus || 'Unpaid');
     setRescheduleDepId('');
     setNewInternalNote('');
 
@@ -118,7 +123,11 @@ export const BookingsManagePage = () => {
       setBookingDetails(detailRes.data || detailRes);
       // Filter departures to open future ones
       const openDeps = (depRes.data || depRes || []).filter(
-        (d) => d.id !== booking.departureId && d.status === 'open'
+        (d) =>
+          d.id !== booking.departureId &&
+          d.status === 'open' &&
+          !d.isDeadlinePassed &&
+          (d.capacity || 0) - (d.bookedCount || 0) >= (booking.numberOfTravelers || 1)
       );
       setDepartures(openDeps);
     } catch (err) {
@@ -136,10 +145,15 @@ export const BookingsManagePage = () => {
 
     try {
       setUpdating(true);
-      const payload = {
-        bookingStatus: editBookingStatus,
-        paymentStatus: editPaymentStatus,
-      };
+      const payload = {};
+      if (editBookingStatus && editBookingStatus !== selectedBooking.bookingStatus) {
+        payload.bookingStatus = editBookingStatus;
+      }
+      // Only send paymentStatus when actually changed (and permitted) — the
+      // backend rejects any paymentStatus field from non-support/admin roles.
+      if (canEditPayment && editPaymentStatus && editPaymentStatus !== selectedBooking.paymentStatus) {
+        payload.paymentStatus = editPaymentStatus;
+      }
 
       if (newInternalNote.trim()) {
         payload.internalNotes = newInternalNote.trim();
@@ -147,6 +161,11 @@ export const BookingsManagePage = () => {
 
       if (rescheduleDepId) {
         payload.rescheduleDepartureId = rescheduleDepId;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        notify.info('No changes to save.');
+        return;
       }
 
       await adminApi.supportUpdateBooking(selectedBooking.id, payload);
@@ -275,6 +294,7 @@ export const BookingsManagePage = () => {
               <SelectItem value="Pending">Pending</SelectItem>
               <SelectItem value="Cancelled">Cancelled</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="Rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
 
@@ -288,9 +308,8 @@ export const BookingsManagePage = () => {
             <SelectContent>
               <SelectItem value="all">All Payment Statuses</SelectItem>
               <SelectItem value="Paid">Paid</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Unpaid">Unpaid</SelectItem>
               <SelectItem value="Refunded">Refunded</SelectItem>
-              <SelectItem value="Failed">Failed</SelectItem>
             </SelectContent>
           </Select>
 
@@ -733,21 +752,21 @@ export const BookingsManagePage = () => {
                         <SelectItem value="Pending">Pending</SelectItem>
                         <SelectItem value="Cancelled">Cancelled</SelectItem>
                         <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="booking-edit-payment" className="text-xs font-semibold">Payment Status</Label>
-                    <Select value={editPaymentStatus} onValueChange={setEditPaymentStatus}>
+                    <Select value={editPaymentStatus} onValueChange={setEditPaymentStatus} disabled={!canEditPayment}>
                       <SelectTrigger id="booking-edit-payment" className="h-9 text-xs text-slate-700">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Paid">Paid</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Unpaid">Unpaid</SelectItem>
                         <SelectItem value="Refunded">Refunded</SelectItem>
-                        <SelectItem value="Failed">Failed</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

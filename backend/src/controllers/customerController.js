@@ -46,6 +46,9 @@ export const syncProfile = async (req, res, next) => {
   try {
     const userId = req.user.uid;
     const { fullName, phone, emergencyContact } = req.body;
+    if ((fullName !== undefined && typeof fullName !== 'string') || (phone !== undefined && typeof phone !== 'string')) {
+      return sendError(res, 'fullName and phone must be text', 400);
+    }
     const now = new Date().toISOString();
     const docRef = db.collection(USERS_COLLECTION).doc(userId);
     const existing = await docRef.get();
@@ -82,7 +85,20 @@ export const updateProfile = async (req, res, next) => {
     const userId = req.user.uid;
     const { fullName, phone, emergencyContact } = req.body;
 
+    if ((fullName !== undefined && typeof fullName !== 'string') || (phone !== undefined && typeof phone !== 'string')) {
+      return sendError(res, 'fullName and phone must be text', 400);
+    }
+    if (fullName !== undefined && !fullName.trim()) {
+      return sendError(res, 'Full name cannot be empty', 400);
+    }
+
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
+    const existing = await userRef.get();
+    if (!existing.exists) {
+      // update() on a missing doc throws NOT_FOUND (500); the client should sync first
+      return sendError(res, 'Profile not found. Please sign in again to sync your profile.', 404);
+    }
+
     const updates = {
       updatedAt: new Date().toISOString(),
     };
@@ -93,9 +109,13 @@ export const updateProfile = async (req, res, next) => {
 
     await userRef.update(updates);
 
-    // Also update Firebase Auth display name if fullName provided
-    if (fullName && auth) {
-      await auth.updateUser(userId, { displayName: fullName.trim() });
+    // Also update Firebase Auth display name if fullName provided (non-fatal)
+    if (updates.fullName && auth) {
+      try {
+        await auth.updateUser(userId, { displayName: updates.fullName });
+      } catch (authErr) {
+        console.warn('[updateProfile] Could not update Firebase Auth displayName:', authErr.message);
+      }
     }
 
     const updated = await userRef.get();
@@ -177,8 +197,11 @@ export const createCoTraveler = async (req, res, next) => {
     const userId = req.user.uid;
     const { fullName, birthDate, relationship = 'Companion', dietaryOrMedicalNotes = '' } = req.body;
 
-    if (!fullName) {
+    if (typeof fullName !== 'string' || !fullName.trim()) {
       return sendError(res, 'Full name is required for co-traveler', 400);
+    }
+    if (typeof relationship !== 'string' || typeof dietaryOrMedicalNotes !== 'string') {
+      return sendError(res, 'relationship and dietaryOrMedicalNotes must be text', 400);
     }
 
     const now = new Date().toISOString();
@@ -210,10 +233,15 @@ export const updateCoTraveler = async (req, res, next) => {
       return sendError(res, 'Co-traveler not found', 404);
     }
 
-    const updates = { ...req.body };
-    delete updates.id;
-    delete updates.userId;
-    delete updates.createdAt;
+    // Field allowlist — never spread req.body into a Firestore write (AGENTS.md invariant 4)
+    const ALLOWED = ['fullName', 'birthDate', 'relationship', 'dietaryOrMedicalNotes'];
+    const updates = {};
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined) updates[key] = typeof req.body[key] === 'string' ? req.body[key].trim() : req.body[key];
+    }
+    if (updates.fullName !== undefined && !updates.fullName) {
+      return sendError(res, 'Full name cannot be empty', 400);
+    }
     updates.updatedAt = new Date().toISOString();
 
     await docRef.update(updates);
@@ -257,8 +285,9 @@ export const getNotifications = async (req, res, next) => {
 
     let list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    list = list.slice(0, 30);
+    // Count unread across ALL notifications, not just the 30 returned
     const unreadCount = list.filter((n) => !n.isRead).length;
+    list = list.slice(0, 30);
 
     return sendSuccess(res, { notifications: list, unreadCount });
   } catch (error) {

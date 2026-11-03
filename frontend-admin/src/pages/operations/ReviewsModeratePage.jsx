@@ -51,7 +51,7 @@ export const ReviewsModeratePage = () => {
     try {
       setLoading(true);
       setError('');
-      const res = await adminApi.getReviews();
+      const res = await adminApi.getReviews({ limit: 500 });
       setReviews(res.data || []);
     } catch (err) {
       console.error('[ReviewsModeratePage] Error:', err);
@@ -66,13 +66,11 @@ export const ReviewsModeratePage = () => {
   }, []);
 
   const handleToggleApproval = async (review) => {
+    if (updatingId) return;
     try {
       setUpdatingId(review.id);
       const newStatus = !review.isApproved;
-      await adminApi.moderateReview(review.id, {
-        isApproved: newStatus,
-        isFlagged: review.isFlagged,
-      });
+      await adminApi.moderateReview(review.id, { isApproved: newStatus });
 
       setReviews((prev) =>
         prev.map((r) => (r.id === review.id ? { ...r, isApproved: newStatus } : r))
@@ -87,13 +85,11 @@ export const ReviewsModeratePage = () => {
   };
 
   const handleToggleFlag = async (review) => {
+    if (updatingId) return;
     try {
       setUpdatingId(review.id);
       const newFlagged = !review.isFlagged;
-      await adminApi.moderateReview(review.id, {
-        isApproved: review.isApproved,
-        isFlagged: newFlagged,
-      });
+      await adminApi.moderateReview(review.id, { isFlagged: newFlagged });
 
       setReviews((prev) =>
         prev.map((r) => (r.id === review.id ? { ...r, isFlagged: newFlagged } : r))

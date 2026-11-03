@@ -51,13 +51,20 @@ export const createReview = async (req, res, next) => {
       return sendError(res, 'packageId, bookingId, and rating are required', 400);
     }
 
+    if (comment !== undefined && comment !== null && typeof comment !== 'string') {
+      return sendError(res, 'comment must be text', 400);
+    }
+    if (typeof comment === 'string' && comment.length > 2000) {
+      return sendError(res, 'comment must be 2000 characters or fewer', 400);
+    }
+
     const numRating = Number(rating);
     if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
       return sendError(res, 'Rating must be an integer between 1 and 5', 400);
     }
 
     // 1. Verify eligibility: Check booking belongs to customer, is for package, and is Completed
-    const bookingDoc = await db.collection('bookings').doc(bookingId).get();
+    const bookingDoc = await db.collection('bookings').doc(String(bookingId)).get();
     if (!bookingDoc.exists) {
       return sendError(res, 'Booking reservation not found', 404);
     }
@@ -255,9 +262,11 @@ export const adminModerateReview = async (req, res, next) => {
       return sendError(res, 'Review not found', 404);
     }
 
+    // Boolean("false") === true, so parse explicitly
+    const toBool = (v) => v === true || v === 'true' || v === 1 || v === '1';
     const updates = { updatedAt: new Date().toISOString() };
-    if (isApproved !== undefined) updates.isApproved = Boolean(isApproved);
-    if (isFlagged !== undefined) updates.isFlagged = Boolean(isFlagged);
+    if (isApproved !== undefined) updates.isApproved = toBool(isApproved);
+    if (isFlagged !== undefined) updates.isFlagged = toBool(isFlagged);
 
     await docRef.update(updates);
 

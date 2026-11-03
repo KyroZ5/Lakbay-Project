@@ -218,6 +218,112 @@ export const DashboardOverviewPage = () => {
         </Card>
       </div>
 
+      {role === 'operator' ? (
+      <>
+      {/* Operator: approval pipeline + recent reservations (operator metrics have no charts) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-bold text-slate-900">
+              Package Approval Status
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              Compliance review state of your submitted tour packages
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!summary.totalPackages ? (
+              <EmptyState
+                icon={Package}
+                title="No packages yet"
+                description="Create a tour package and submit it for approval."
+                className="py-8"
+              />
+            ) : (
+              <div className="space-y-4">
+                {[
+                  { key: 'approved', label: 'Approved', color: 'bg-emerald-500' },
+                  { key: 'pending', label: 'Pending Approval', color: 'bg-amber-400' },
+                  { key: 'rejected', label: 'Rejected', color: 'bg-red-400' },
+                  { key: 'draft', label: 'Draft', color: 'bg-slate-400' },
+                ].map(({ key, label, color }) => {
+                  const count = summary.approvalBreakdown?.[key] || 0;
+                  const pct = Math.round((count / (summary.totalPackages || 1)) * 100);
+                  return (
+                    <div key={key} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-medium">
+                        <span className="text-slate-700">{label}</span>
+                        <span className="font-semibold text-slate-900">
+                          {count} ({pct}%)
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 shadow-sm lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-bold text-slate-900">
+                Recent Reservations
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500">
+                Latest bookings on your tour packages
+              </CardDescription>
+            </div>
+            <Button asChild variant="ghost" size="sm" className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+              <Link to="/operations/bookings">
+                View Bookings <ArrowRight className="h-3 w-3" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {(!data.recentBookings || data.recentBookings.length === 0) ? (
+              <EmptyState
+                icon={Ticket}
+                title="No reservations yet"
+                description="Bookings on your packages will appear here."
+                className="py-8"
+              />
+            ) : (
+              <div className="space-y-3">
+                {data.recentBookings.map((b) => (
+                  <div
+                    key={b.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-slate-800 truncate">
+                        {b.packageName || 'Tour Package'}
+                      </div>
+                      <div className="text-xs text-slate-500 truncate">
+                        {b.bookingReference || b.id} &bull; {b.customerName || 'Traveler'} &bull;{' '}
+                        {b.numberOfTravelers || 1} pax &bull; Departs {b.departureDate || 'N/A'}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-sm font-bold text-slate-900">{formatPHP(b.totalPrice)}</span>
+                      <Badge variant="outline" className="bg-white text-[10px] font-semibold text-slate-700">
+                        {b.bookingStatus || 'Pending'} / {b.paymentStatus || 'Unpaid'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      </>
+      ) : (
+      <>
       {/* Breakdown and Top Packages Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Booking Status Distribution */}
@@ -356,6 +462,8 @@ export const DashboardOverviewPage = () => {
           </div>
         </div>
       </div>
+      </>
+      )}
       </>
       ) : null}
     </div>

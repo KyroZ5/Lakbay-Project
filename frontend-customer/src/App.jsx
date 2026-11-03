@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, useNavigate } from 'react-router-dom';
+import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppRoutes } from './routes/AppRoutes';
 import { Toaster } from './components/ui/sonner';
@@ -17,15 +17,19 @@ export function App() {
 
 function AppInner() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const onSessionExpired = () => {
       signOut(auth);
-      navigate('/login', { replace: true });
+      // Return the user to where they were after signing back in
+      const from = location.pathname + location.search;
+      const onAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+      navigate(onAuthPage ? '/login' : `/login?redirect=${encodeURIComponent(from)}`, { replace: true });
     };
     window.addEventListener('auth:session-expired', onSessionExpired);
     return () => window.removeEventListener('auth:session-expired', onSessionExpired);
-  }, [navigate, auth]);
+  }, [navigate, location]);
 
   return (
     <TooltipProvider delayDuration={300}>

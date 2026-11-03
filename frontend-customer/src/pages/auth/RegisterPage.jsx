@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -8,11 +8,15 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { Card, CardContent } from '../../components/ui/card';
 import { FieldError } from '../../components/common/FieldError';
 import { notify, getErrorMessage } from '../../lib/notify';
+import { AuthShell } from '../../components/common/AuthShell';
+import { getSafeRedirect, withRedirect } from '../../lib/redirect';
 import { Compass, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register } = useAuth();
+  const redirectPath = getSafeRedirect(location.search);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,7 +53,7 @@ export const RegisterPage = () => {
     try {
       await register(email, password, fullName, phone);
       notify.success('Account created. Welcome to Lakbay!');
-      navigate('/dashboard');
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error('Registration error:', err);
       if (err.code === 'auth/email-already-in-use') {
@@ -65,19 +69,11 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <Link to="/" className="inline-flex items-center gap-2 mb-2">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-              <Compass className="h-6 w-6 stroke-[2.2]" />
-            </div>
-            <span className="text-2xl font-black text-slate-900 font-heading">
-              Lakbay<span className="text-emerald-600">.ph</span>
-            </span>
-          </Link>
+    <AuthShell>
+      <div className="w-full space-y-6">
+        <div className="text-center lg:text-left">
           <h2 className="text-2xl font-extrabold text-slate-900 font-heading">
-            Create Your Traveler Account
+            Create Your <span className="text-gradient">Traveler Account</span>
           </h2>
           <p className="mt-1 text-xs text-slate-500">
             Join thousands of travelers exploring the Philippine archipelago.
@@ -191,7 +187,7 @@ export const RegisterPage = () => {
                     className="mt-0.5"
                   />
                   <label htmlFor="terms" className="text-xs text-slate-600 leading-tight cursor-pointer">
-                    I agree to the <Link to="/contact#cancellation" className="text-emerald-600 underline">Terms & Conditions</Link> and acknowledge the package cancellation policies.
+                    I agree to the <Link to="/legal#terms" className="text-emerald-600 underline">Terms & Conditions</Link> and acknowledge the package cancellation policies.
                   </label>
                 </div>
                 <FieldError id="terms-error">{formErrors.terms}</FieldError>
@@ -215,13 +211,13 @@ export const RegisterPage = () => {
 
             <div className="mt-6 text-center text-xs text-slate-500">
               Already have an account?{' '}
-              <Link to="/login" className="font-bold text-emerald-600 hover:underline">
+              <Link to={withRedirect('/login', redirectPath)} className="font-bold text-emerald-600 hover:underline">
                 Log In
               </Link>
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AuthShell>
   );
 };

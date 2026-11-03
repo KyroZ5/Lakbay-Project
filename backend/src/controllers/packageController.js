@@ -5,6 +5,7 @@ import { geocodeAddress } from '../services/locationService.js';
 import { computeBookingDeadline } from './departureController.js';
 import { todayInManila } from '../utils/dates.js';
 import { parseLimit } from '../utils/query.js';
+import { commitInChunks } from '../utils/batch.js';
 
 const COLLECTION = 'tourPackages';
 
@@ -90,8 +91,11 @@ export const getPackages = async (req, res, next) => {
       query = query.where('isFeatured', '==', featured === 'true');
     }
 
-    const snapshot = await query.limit(parseLimit(limit)).get();
+    // NOTE: the page-size limit is applied AFTER the in-memory filters below;
+    // limiting the Firestore query first silently dropped matching packages.
+    const snapshot = await query.get();
     let packages = snapshot.docs.map((doc) => enrichPackagePricing({ id: doc.id, ...doc.data() }));
+    const pageSize = parseLimit(limit);
 
     // Rule: Public catalog only shows approved packages (or legacy packages without status)
     if (!isStaff) {
@@ -115,7 +119,7 @@ export const getPackages = async (req, res, next) => {
     }
 
     // In-memory multi-field filtering
-    if (search && search.trim()) {
+    if (typeof search === 'string' && search.trim()) {
       const term = search.trim().toLowerCase();
       packages = packages.filter(
         (pkg) =>
@@ -125,17 +129,47 @@ export const getPackages = async (req, res, next) => {
       );
     }
 
-    if (minPrice !== undefined) {
-      packages = packages.filter((pkg) => Number(pkg.effectivePrice) >= Number(minPrice));
+    // Ignore empty / non-numeric bounds instead of filtering everything out
+    const numParam = (v) => (v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+    const [minP, maxP, minD, maxD] = [minPrice, maxPrice, minDuration, maxDuration].map(numParam);
+    if (minP !== null) {
+      packages = packages.filter((pkg) => Number(pkg.effectivePrice) >= minP);
     }
-    if (maxPrice !== undefined) {
-      packages = packages.filter((pkg) => Number(pkg.effectivePrice) <= Number(maxPrice));
+    if (maxP !== null) {
+      packages = packages.filter((pkg) => Number(pkg.effectivePrice) <= maxP);
     }
-    if (minDuration !== undefined) {
-      packages = packages.filter((pkg) => Number(pkg.durationDays) >= Number(minDuration));
+    if (minD !== null) {
+      packages = packages.filter((pkg) => Number(pkg.durationDays) >= minD);
     }
-    if (maxDuration !== undefined) {
-      packages = packages.filter((pkg) => Number(pkg.durationDays) <= Number(maxDuration));
+    if (maxD !== null) {
+      packages = packages.filter((pkg) => Number(pkg.durationDays) <= maxD);
+    }
+
+    // Sorting
+    if (sort === 'price_asc') {
+      packages.sort((a, b) => Number(a.effectivePrice || a.pricePerPerson) - Number(b.effectivePrice || b.pricePerPerson));
+    } else if (sort === 'price_desc') {
+      packages.sort((a, b) => Number(b.effectivePrice || b.pricePerPerson) - Number(a.effectivePrice || a.pricePerPerson));
+    } else if (sort === 'duration_asc') {
+      packages.sort((a, b) => Number(a.durationDays) - Number(b.durationDays));
+    } else if (sort === 'duration_desc') {
+      packages.sort((a, b) => Number(b.durationDays) - Number(a.durationDays));
+    } else if (sort === 'name_asc') {
+      packages.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else {
+      // Default: featured first, then newest
+      packages.sort((a, b) => {
+        if (a.isFeatured !== b.isFeatured) return b.isFeatured ? 1 : -1;
+        return (b.createdAt || '').localeCompare(a.createdAt || '');
+      });
+    }
+
+    // Departure-date filtering depends on departure data, so only pre-slice
+    // (to avoid N departure lookups) when no date filter is requested.
+    const targetDateFrom = departureDateFrom || departureDate;
+    const targetDateTo = departureDateTo || departureDate;
+    if (!targetDateFrom && !targetDateTo) {
+      packages = packages.slice(0, pageSize);
     }
 
     // Attach destination names and upcoming departure summaries
@@ -187,9 +221,6 @@ export const getPackages = async (req, res, next) => {
     }
 
     // Departure Date filtering (Rule D & Checklist Sec A: Catalog Date Filter)
-    const targetDateFrom = departureDateFrom || departureDate;
-    const targetDateTo = departureDateTo || departureDate;
-
     if (targetDateFrom || targetDateTo) {
       packages = packages.filter((pkg) => {
         return (pkg.openDepartures || []).some((dep) => {
@@ -199,25 +230,7 @@ export const getPackages = async (req, res, next) => {
           return true;
         });
       });
-    }
-
-    // Sorting
-    if (sort === 'price_asc') {
-      packages.sort((a, b) => Number(a.effectivePrice || a.pricePerPerson) - Number(b.effectivePrice || b.pricePerPerson));
-    } else if (sort === 'price_desc') {
-      packages.sort((a, b) => Number(b.effectivePrice || b.pricePerPerson) - Number(a.effectivePrice || a.pricePerPerson));
-    } else if (sort === 'duration_asc') {
-      packages.sort((a, b) => Number(a.durationDays) - Number(b.durationDays));
-    } else if (sort === 'duration_desc') {
-      packages.sort((a, b) => Number(b.durationDays) - Number(a.durationDays));
-    } else if (sort === 'name_asc') {
-      packages.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    } else {
-      // Default: featured first, then newest
-      packages.sort((a, b) => {
-        if (a.isFeatured !== b.isFeatured) return b.isFeatured ? 1 : -1;
-        return (b.createdAt || '').localeCompare(a.createdAt || '');
-      });
+      packages = packages.slice(0, pageSize);
     }
 
     return sendSuccess(res, packages, `Retrieved ${packages.length} tour package(s)`);
@@ -238,7 +251,10 @@ export const getFeaturedPackages = async (req, res, next) => {
       .limit(6)
       .get();
 
-    const packages = snapshot.docs.map((doc) => enrichPackagePricing({ id: doc.id, ...doc.data() }));
+    // Same public visibility rule as getPackages: hide pending/rejected operator packages
+    const packages = snapshot.docs
+      .map((doc) => enrichPackagePricing({ id: doc.id, ...doc.data() }))
+      .filter((pkg) => !pkg.approvalStatus || pkg.approvalStatus === 'approved');
 
     for (const pkg of packages) {
       if (pkg.destinationId) {
@@ -266,9 +282,14 @@ export const getPackageById = async (req, res, next) => {
     }
 
     const pkg = enrichPackagePricing({ id: doc.id, ...doc.data() });
-    const isStaff = req.user && ['coordinator', 'support', 'guide', 'admin'].includes(req.user.role);
+    // Owning operators get the same full view as staff for their own packages
+    // (needed to edit pending/rejected tours from the operator portal).
+    const isStaff =
+      (req.user && ['coordinator', 'support', 'guide', 'admin'].includes(req.user.role)) ||
+      (req.user?.role === 'operator' && pkg.operatorId === req.user.uid);
 
-    if (!pkg.isPublished && !isStaff) {
+    const isApproved = !pkg.approvalStatus || pkg.approvalStatus === 'approved';
+    if ((!pkg.isPublished || !isApproved) && !isStaff) {
       return sendError(res, 'Tour package is not published', 403);
     }
 
@@ -383,8 +404,18 @@ export const createPackage = async (req, res, next) => {
       isFeatured = false,
     } = req.body;
 
-    if (!name || !destinationId || pricePerPerson === undefined) {
+    if (typeof name !== 'string' || !name.trim() || !destinationId || pricePerPerson === undefined) {
       return sendError(res, 'Name, destinationId, and pricePerPerson are required', 400);
+    }
+
+    const priceNum = Number(pricePerPerson);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      return sendError(res, 'pricePerPerson must be a positive number', 400);
+    }
+    const daysNum = Number(durationDays);
+    const nightsNum = Number(durationNights);
+    if (!Number.isInteger(daysNum) || daysNum < 1 || !Number.isInteger(nightsNum) || nightsNum < 0) {
+      return sendError(res, 'durationDays must be a whole number >= 1 and durationNights >= 0', 400);
     }
 
     // Verify destination exists
@@ -399,12 +430,26 @@ export const createPackage = async (req, res, next) => {
 
     const isOperator = req.user?.role === 'operator';
     const operatorId = isOperator ? req.user.uid : (req.body.operatorId || 'platform');
+    // req.user (from verifyToken) carries no agencyName, so read it from the
+    // operator's profile; otherwise the contact person's name was shown.
+    let operatorAgencyName = '';
+    if (isOperator) {
+      const opDoc = await db.collection('users').doc(req.user.uid).get();
+      operatorAgencyName = opDoc.exists ? opDoc.data().agencyName || '' : '';
+    }
     const operatorName = isOperator
-      ? (req.user.agencyName || req.user.fullName || req.user.email?.split('@')[0] || 'Tour Operator')
+      ? (operatorAgencyName || req.user.fullName || req.user.email?.split('@')[0] || 'Tour Operator')
       : (req.body.operatorName || 'Lakbay Official');
-    const approvalStatus = isOperator ? 'pending_approval' : (req.body.approvalStatus || 'approved');
+    const APPROVAL_STATUSES = ['approved', 'pending_approval', 'rejected', 'draft'];
+    const approvalStatus = isOperator
+      ? 'pending_approval'
+      : (APPROVAL_STATUSES.includes(req.body.approvalStatus) ? req.body.approvalStatus : 'approved');
     const isPublishedSafe = isOperator ? false : Boolean(isPublished);
 
+    const cutoffNum = cancellationCutoffDays === undefined || cancellationCutoffDays === '' ? 7 : Number(cancellationCutoffDays);
+    if (!Number.isInteger(cutoffNum) || cutoffNum < 0) {
+      return sendError(res, 'cancellationCutoffDays must be a whole number of at least 0', 400);
+    }
     const pricing = computePricing(pricePerPerson, discountPercent);
     const now = new Date().toISOString();
     const packageData = {
@@ -412,14 +457,14 @@ export const createPackage = async (req, res, next) => {
       destinationId,
       description,
       category,
-      pricePerPerson: Number(pricePerPerson),
+      pricePerPerson: priceNum,
       discountPercent: pricing.discountPercent,
       discountPrice: pricing.discountPrice,
       effectivePrice: pricing.effectivePrice,
       hasDiscount: pricing.hasDiscount,
-      durationDays: Number(durationDays),
-      durationNights: Number(durationNights),
-      cancellationCutoffDays: Number(cancellationCutoffDays) || 7,
+      durationDays: daysNum,
+      durationNights: nightsNum,
+      cancellationCutoffDays: cutoffNum,
       itinerary: enrichedItinerary,
       inclusions: Array.isArray(inclusions) ? inclusions : [],
       exclusions: Array.isArray(exclusions) ? exclusions : [],
@@ -515,6 +560,19 @@ export const updatePackage = async (req, res, next) => {
     delete updates.hasDiscount;
     updates.updatedAt = new Date().toISOString();
 
+    if (updates.name !== undefined) {
+      if (typeof updates.name !== 'string' || !updates.name.trim()) {
+        return sendError(res, 'Package name cannot be empty', 400);
+      }
+      updates.name = updates.name.trim();
+    }
+    if (updates.destinationId !== undefined && updates.destinationId !== existingData.destinationId) {
+      const newDest = await db.collection('destinations').doc(String(updates.destinationId)).get();
+      if (!newDest.exists) {
+        return sendError(res, 'Specified destination does not exist', 400);
+      }
+    }
+
     // Validate price when provided
     if (updates.pricePerPerson !== undefined) {
       const priceNum = Number(updates.pricePerPerson);
@@ -534,14 +592,20 @@ export const updatePackage = async (req, res, next) => {
       updates.effectivePrice = pricing.effectivePrice;
       updates.hasDiscount = pricing.hasDiscount;
     }
-    if (updates.durationDays !== undefined) {
-      updates.durationDays = Number(updates.durationDays);
-    }
-    if (updates.durationNights !== undefined) {
-      updates.durationNights = Number(updates.durationNights);
-    }
-    if (updates.cancellationCutoffDays !== undefined) {
-      updates.cancellationCutoffDays = Number(updates.cancellationCutoffDays);
+    // Numeric fields: must be whole numbers in range (never store NaN or negatives)
+    const intField = (key, min, label) => {
+      if (updates[key] === undefined) return null;
+      const n = Number(updates[key]);
+      if (!Number.isInteger(n) || n < min) return `${label} must be a whole number of at least ${min}`;
+      updates[key] = n;
+      return null;
+    };
+    const numError =
+      intField('durationDays', 1, 'durationDays') ||
+      intField('durationNights', 0, 'durationNights') ||
+      intField('cancellationCutoffDays', 0, 'cancellationCutoffDays');
+    if (numError) {
+      return sendError(res, numError, 400);
     }
 
     // Geocode new itinerary activities if provided
@@ -608,6 +672,12 @@ export const deletePackage = async (req, res, next) => {
     }
 
     const packageName = doc.data().name;
+
+    // Remove the package's departures too (none have bookings, checked above);
+    // otherwise orphaned departures keep pointing at a deleted package.
+    const depSnap = await db.collection('departures').where('packageId', '==', id).get();
+    await commitInChunks(db, depSnap.docs, (batch, d) => batch.delete(d.ref));
+
     await docRef.delete();
 
     await logActivity({

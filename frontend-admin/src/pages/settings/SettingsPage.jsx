@@ -171,7 +171,11 @@ export const SettingsPage = () => {
       ? 'Tour Coordinator'
       : role === 'guide'
       ? 'Licensed Tour Guide'
-      : 'Customer Support Specialist';
+      : role === 'operator'
+      ? 'Accredited Tour Operator'
+      : role === 'support'
+      ? 'Customer Support Specialist'
+      : 'Staff Member';
 
   return (
     <div className="max-w-4xl space-y-8">

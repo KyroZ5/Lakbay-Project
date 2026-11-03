@@ -47,6 +47,25 @@ import {
   MapPin,
 } from 'lucide-react';
 
+// Timezone-safe YYYY-MM-DD helpers (business TZ: Asia/Manila). Avoids
+// new Date('YYYY-MM-DD') UTC parsing and toISOString() day shifts.
+const todayInManila = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+
+const addDaysToDateStr = (dateStr, days) => {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  if (!y || !m || !d) return dateStr;
+  const dt = new Date(Date.UTC(y, m - 1, d + (Number(days) || 0)));
+  return dt.toISOString().slice(0, 10);
+};
+
+const durationOffset = (pkg) => Math.max(0, (Number(pkg?.durationDays) || 1) - 1);
+
 export const DeparturesManagePage = () => {
   const [departures, setDepartures] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -85,8 +104,8 @@ export const DeparturesManagePage = () => {
       setError('');
       const [depsRes, pkgsRes, guidesRes] = await Promise.all([
         adminApi.getDepartures(),
-        adminApi.getPackages(),
-        adminApi.getUsers({ role: 'guide' }).catch(() => ({ data: [] })),
+        adminApi.getPackages({ limit: 200 }),
+        adminApi.getGuides().catch(() => ({ data: [] })),
       ]);
 
       setDepartures(depsRes.data || depsRes || []);
@@ -108,16 +127,8 @@ export const DeparturesManagePage = () => {
     setEditingDeparture(null);
     setFormErrors({});
     const firstPkg = packages[0];
-    const today = new Date();
-    today.setDate(today.getDate() + 7);
-    const depStr = today.toISOString().split('T')[0];
-
-    let retStr = depStr;
-    if (firstPkg) {
-      const retDate = new Date(today);
-      retDate.setDate(retDate.getDate() + (firstPkg.durationDays - 1));
-      retStr = retDate.toISOString().split('T')[0];
-    }
+    const depStr = addDaysToDateStr(todayInManila(), 7);
+    const retStr = firstPkg ? addDaysToDateStr(depStr, durationOffset(firstPkg)) : depStr;
 
     setFormData({
       packageId: firstPkg?.id || '',
@@ -155,9 +166,7 @@ export const DeparturesManagePage = () => {
     const pkg = packages.find((p) => p.id === pkgId);
     let retDate = formData.returnDate;
     if (pkg && formData.departureDate) {
-      const d = new Date(formData.departureDate);
-      d.setDate(d.getDate() + (pkg.durationDays - 1));
-      retDate = d.toISOString().split('T')[0];
+      retDate = addDaysToDateStr(formData.departureDate, durationOffset(pkg));
     }
     setFormData({ ...formData, packageId: pkgId, returnDate: retDate });
   };
@@ -166,9 +175,7 @@ export const DeparturesManagePage = () => {
     const pkg = packages.find((p) => p.id === formData.packageId);
     let retDate = depDate;
     if (pkg && depDate) {
-      const d = new Date(depDate);
-      d.setDate(d.getDate() + (pkg.durationDays - 1));
-      retDate = d.toISOString().split('T')[0];
+      retDate = addDaysToDateStr(depDate, durationOffset(pkg));
     }
     setFormData({ ...formData, departureDate: depDate, returnDate: retDate });
   };
@@ -183,8 +190,14 @@ export const DeparturesManagePage = () => {
       errors.packageId = 'Please select a tour package.';
     }
     // Capacity validation guard
-    if (editingDeparture && Number(formData.capacity) < (editingDeparture.bookedCount || 0)) {
+    const capNum = Number(formData.capacity);
+    if (!Number.isInteger(capNum) || capNum < 1) {
+      errors.capacity = 'Capacity must be a whole number of at least 1.';
+    } else if (editingDeparture && capNum < (editingDeparture.bookedCount || 0)) {
       errors.capacity = `Cannot reduce capacity to ${formData.capacity}. There are already ${editingDeparture.bookedCount} booked travelers.`;
+    }
+    if (formData.returnDate && formData.departureDate && formData.returnDate < formData.departureDate) {
+      errors.returnDate = 'Return date cannot be before the departure date.';
     }
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -224,7 +237,7 @@ export const DeparturesManagePage = () => {
   };
 
   const handleCancelDeparture = async () => {
-    if (!cancellingDeparture) return;
+    if (!cancellingDeparture || cancelling) return;
     try {
       setCancelling(true);
       await adminApi.cancelDeparture(cancellingDeparture.id, cancelReason || 'Operational rescheduling');
@@ -239,8 +252,12 @@ export const DeparturesManagePage = () => {
     }
   };
 
+  // Backend has no persisted 'full' status — derive it from capacity for oversight
+  const displayStatus = (dep) =>
+    dep.status === 'open' && (dep.bookedCount || 0) >= (dep.capacity || 0) ? 'full' : dep.status;
+
   const filtered = departures.filter((dep) => {
-    const matchesStatus = !statusFilter || dep.status === statusFilter;
+    const matchesStatus = !statusFilter || displayStatus(dep) === statusFilter;
     const matchesPackage = !packageFilter || dep.packageId === packageFilter;
     return matchesStatus && matchesPackage;
   });
@@ -377,7 +394,10 @@ export const DeparturesManagePage = () => {
             ) : (
               filtered.map((dep) => {
                 const pkg = packages.find((p) => p.id === dep.packageId) || dep.package;
-                const guide = guides.find((g) => g.uid === dep.assignedGuideId || g.id === dep.assignedGuideId);
+                const guide = guides.find((g) => g.uid === dep.assignedGuideId || g.id === dep.assignedGuideId) ||
+                  (dep.assignedGuideId && dep.assignedGuideName && dep.assignedGuideName !== 'Unassigned'
+                    ? { fullName: dep.assignedGuideName }
+                    : null);
                 const booked = dep.bookedCount || 0;
                 const capacity = dep.capacity || 15;
                 const pct = Math.min(100, Math.round((booked / capacity) * 100));
@@ -449,9 +469,9 @@ export const DeparturesManagePage = () => {
                     <TableCell>
                       <Badge
                         variant={
-                          dep.status === 'open'
+                          displayStatus(dep) === 'open'
                             ? 'success'
-                            : dep.status === 'full'
+                            : displayStatus(dep) === 'full'
                             ? 'warning'
                             : dep.status === 'completed'
                             ? 'info'
@@ -459,7 +479,7 @@ export const DeparturesManagePage = () => {
                         }
                         className="capitalize text-xs font-semibold"
                       >
-                        {dep.status}
+                        {displayStatus(dep)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -478,7 +498,7 @@ export const DeparturesManagePage = () => {
                           </TooltipTrigger>
                           <TooltipContent>Edit Departure</TooltipContent>
                         </Tooltip>
-                        {dep.status !== 'cancelled' && (
+                        {dep.status !== 'cancelled' && dep.status !== 'completed' && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
@@ -583,9 +603,16 @@ export const DeparturesManagePage = () => {
                   id="ret-date"
                   type="date"
                   value={formData.returnDate}
-                  onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, returnDate: e.target.value });
+                    setFormErrors((prev) => ({ ...prev, returnDate: undefined }));
+                  }}
+                  min={formData.departureDate || undefined}
                   required
+                  aria-invalid={Boolean(formErrors.returnDate)}
+                  aria-describedby={formErrors.returnDate ? 'ret-date-error' : undefined}
                 />
+                <FieldError id="ret-date-error">{formErrors.returnDate}</FieldError>
               </div>
             </div>
 
@@ -673,8 +700,10 @@ export const DeparturesManagePage = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="full">Full</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    {/* Cancelling must go through the Cancel action so affected customers are notified */}
+                    {formData.status === 'cancelled' && (
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    )}
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>

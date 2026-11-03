@@ -1,5 +1,6 @@
 import { db } from '../config/firebaseAdmin.js';
-import { sendSuccess, sendError } from '../utils/apiResponse.js';
+import { sendSuccess, sendError, httpError } from '../utils/apiResponse.js';
+import { todayInManila } from '../utils/dates.js';
 import { logActivity } from '../services/auditService.js';
 import { getCurrentWeather } from '../services/weatherService.js';
 import { commitInChunks } from '../utils/batch.js';
@@ -38,31 +39,42 @@ export const getAssignedDepartures = async (req, res, next) => {
     let departures = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     departures.sort((a, b) => (a.departureDate || '').localeCompare(b.departureDate || ''));
 
-    // Attach package info and destination weather
-    for (const dep of departures) {
-      if (dep.packageId) {
-        const pDoc = await db.collection(PACKAGES_COLLECTION).doc(dep.packageId).get();
-        if (pDoc.exists) {
-          const pData = pDoc.data();
-          dep.package = {
-            id: pDoc.id,
-            name: pData.name,
-            durationDays: pData.durationDays,
-            itinerary: pData.itinerary,
-            imageUrls: pData.imageUrls,
-          };
+    // Attach package info and destination weather. Batched (db.getAll) and
+    // de-duplicated per package/destination instead of sequential N+1 reads, so
+    // the request stays well inside the serverless time budget.
+    const packageIds = [...new Set(departures.map((d) => d.packageId).filter(Boolean))];
+    const packageDocs = packageIds.length
+      ? await db.getAll(...packageIds.map((pid) => db.collection(PACKAGES_COLLECTION).doc(pid)))
+      : [];
+    const packagesById = new Map(packageDocs.filter((d) => d.exists).map((d) => [d.id, d.data()]));
 
-          // Destination weather
-          if (pData.destinationId) {
-            const destDoc = await db.collection('destinations').doc(pData.destinationId).get();
-            if (destDoc.exists && destDoc.data().coordinates) {
-              dep.destinationWeather = await getCurrentWeather(
-                destDoc.data().coordinates.lat,
-                destDoc.data().coordinates.lng
-              );
-            }
-          }
-        }
+    const destinationIds = [...new Set([...packagesById.values()].map((p) => p.destinationId).filter(Boolean))];
+    const destinationDocs = destinationIds.length
+      ? await db.getAll(...destinationIds.map((did) => db.collection('destinations').doc(did)))
+      : [];
+    const coordsByDestination = new Map(
+      destinationDocs.filter((d) => d.exists && d.data().coordinates).map((d) => [d.id, d.data().coordinates])
+    );
+
+    const weatherEntries = await Promise.allSettled(
+      [...coordsByDestination.entries()].map(async ([did, c]) => [did, await getCurrentWeather(c.lat, c.lng)])
+    );
+    const weatherByDestination = new Map(
+      weatherEntries.filter((r) => r.status === 'fulfilled').map((r) => r.value)
+    );
+
+    for (const dep of departures) {
+      const pData = dep.packageId ? packagesById.get(dep.packageId) : null;
+      if (!pData) continue;
+      dep.package = {
+        id: dep.packageId,
+        name: pData.name,
+        durationDays: pData.durationDays,
+        itinerary: pData.itinerary,
+        imageUrls: pData.imageUrls,
+      };
+      if (pData.destinationId && coordsByDestination.has(pData.destinationId)) {
+        dep.destinationWeather = weatherByDestination.get(pData.destinationId) ?? null;
       }
     }
 
@@ -99,11 +111,12 @@ export const getDepartureManifest = async (req, res, next) => {
       return sendError(res, 'Unauthorized: You are not authorized to view this departure manifest', 403);
     }
 
-    // Fetch confirmed bookings for this departure
+    // Fetch confirmed bookings for this departure (and Completed ones, so the manifest
+    // of a finished departure doesn't go empty after completeDeparture flips them)
     const bookingsSnap = await db
       .collection(BOOKINGS_COLLECTION)
       .where('departureId', '==', id)
-      .where('bookingStatus', '==', 'Confirmed')
+      .where('bookingStatus', 'in', ['Confirmed', 'Completed'])
       .get();
 
     const manifest = [];
@@ -176,11 +189,17 @@ export const getDepartureManifest = async (req, res, next) => {
 export const updatePassengerCheckIn = async (req, res, next) => {
   try {
     const { id } = req.params; // departureId
-    const { bookingId, travelerIndex = 0, isCheckedIn = true } = req.body;
+    const { bookingId, travelerIndex: rawIndex = 0, isCheckedIn: rawCheckedIn = true } = req.body;
 
     if (!bookingId) {
       return sendError(res, 'bookingId is required', 400);
     }
+    const travelerIndex = Number(rawIndex);
+    if (!Number.isInteger(travelerIndex) || travelerIndex < 0) {
+      return sendError(res, 'travelerIndex must be a non-negative whole number', 400);
+    }
+    // Boolean('false') === true — parse string forms explicitly
+    const isCheckedIn = rawCheckedIn === true || rawCheckedIn === 'true';
 
     // AUTHZ: only the assigned guide / owning operator / admin may check in passengers
     const depDoc = await db.collection(DEPARTURES_COLLECTION).doc(id).get();
@@ -202,9 +221,23 @@ export const updatePassengerCheckIn = async (req, res, next) => {
     if (booking.departureId !== id) {
       return sendError(res, 'Booking does not belong to this departure', 400);
     }
+    if (booking.bookingStatus !== 'Confirmed') {
+      return sendError(res, `Only Confirmed bookings can be checked in (status: ${booking.bookingStatus})`, 400);
+    }
 
     const travelers = booking.travelerManifest || [];
+    // An index past the manifest is an error, not a silent booking-level check-in
+    // (index 0 on a booking with no manifest still checks in the whole party)
+    if (travelers.length > 0 && travelerIndex >= travelers.length) {
+      return sendError(res, `Traveler index ${travelerIndex} is out of range (manifest has ${travelers.length})`, 404);
+    }
+    if (travelers.length === 0 && travelerIndex > 0) {
+      return sendError(res, 'This booking has no traveler manifest; use travelerIndex 0', 404);
+    }
     if (travelers.length > travelerIndex) {
+      if (!travelers[travelerIndex] || typeof travelers[travelerIndex] !== 'object') {
+        return sendError(res, 'Traveler entry not found', 404);
+      }
       travelers[travelerIndex].isCheckedIn = Boolean(isCheckedIn);
       await bookingRef.update({
         travelerManifest: travelers,
@@ -245,14 +278,31 @@ export const completeDeparture = async (req, res, next) => {
       return sendError(res, 'Unauthorized: You are not assigned to this departure', 403);
     }
 
+    const depData = depDoc.data();
+    if (depData.status === 'cancelled') {
+      return sendError(res, 'A cancelled departure cannot be marked as completed', 400);
+    }
+    if (depData.status === 'completed') {
+      return sendError(res, 'Departure is already completed', 400);
+    }
+    if (depData.departureDate && depData.departureDate > todayInManila()) {
+      return sendError(res, `Departure has not started yet (departs ${depData.departureDate}) and cannot be completed`, 400);
+    }
+
     const now = new Date().toISOString();
 
-    // Update departure status to completed
-    await depRef.update({
-      status: 'completed',
-      completedAt: now,
-      completedBy: req.user.uid,
-      updatedAt: now,
+    // Update departure status to completed (re-checked atomically against a concurrent cancel)
+    await db.runTransaction(async (t) => {
+      const snap = await t.get(depRef);
+      if (['cancelled', 'completed'].includes(snap.data().status)) {
+        throw httpError(`Departure is already ${snap.data().status}`, 409);
+      }
+      t.update(depRef, {
+        status: 'completed',
+        completedAt: now,
+        completedBy: req.user.uid,
+        updatedAt: now,
+      });
     });
 
     // Update all confirmed bookings to Completed

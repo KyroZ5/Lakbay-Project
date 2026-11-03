@@ -48,6 +48,11 @@ export const GuideManifestPage = () => {
       const deps = res.data || res || [];
       setAssignedDepartures(deps);
 
+      // Keep the selected departure in sync with fresh data (e.g. after completion)
+      setSelectedDeparture((prev) => {
+        if (!prev) return prev;
+        return deps.find((d) => d.id === prev.id) || prev;
+      });
       if (deps.length > 0 && !selectedDeparture) {
         selectDeparture(deps[0]);
       }
@@ -95,7 +100,10 @@ export const GuideManifestPage = () => {
             ? { ...m, isCheckedIn: newStatus }
             : m
         );
-        const newCheckedInCount = updatedList.filter((m) => m.isCheckedIn).length;
+        // Fallback entries represent a whole party (headcount > 1)
+        const newCheckedInCount = updatedList
+          .filter((m) => m.isCheckedIn)
+          .reduce((sum, m) => sum + (Number(m.headcount) || 1), 0);
         return {
           ...prev,
           checkedInHeadcount: newCheckedInCount,
@@ -123,6 +131,7 @@ export const GuideManifestPage = () => {
       await adminApi.completeDeparture(selectedDeparture.id);
       notify.success('Tour departure successfully finalized and marked as Completed!');
       setConfirmCompleteOpen(false);
+      setSelectedDeparture((prev) => (prev ? { ...prev, status: 'completed' } : prev));
       fetchDepartures();
     } catch (err) {
       notify.error(err, 'Failed to complete departure.');
@@ -132,6 +141,18 @@ export const GuideManifestPage = () => {
   };
 
   const weather = selectedDeparture?.destinationWeather;
+  const todayManila = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  // A tour can only be finalized once it has started and is still active
+  const canComplete =
+    selectedDeparture &&
+    !['completed', 'cancelled'].includes(selectedDeparture.status) &&
+    (selectedDeparture.departureDate || '') <= todayManila;
+  const isClosedDeparture = ['completed', 'cancelled'].includes(selectedDeparture?.status);
   // Skeleton only on the initial load; refreshes keep the current assignments visible
   const showSkeleton = loading && assignedDepartures.length === 0;
   const showManifestSkeleton = loadingManifest && !manifestData;
@@ -212,7 +233,13 @@ export const GuideManifestPage = () => {
                     {dep.package?.name || 'Tour Package'}
                   </span>
                   <Badge
-                    variant={dep.status === 'completed' ? 'secondary' : 'success'}
+                    variant={
+                      dep.status === 'completed'
+                        ? 'secondary'
+                        : dep.status === 'cancelled'
+                        ? 'destructive'
+                        : 'success'
+                    }
                     className="text-[10px] uppercase font-bold"
                   >
                     {dep.status}
@@ -249,10 +276,11 @@ export const GuideManifestPage = () => {
                 </CardDescription>
               </div>
 
-              {selectedDeparture.status !== 'completed' && (
+              {!['completed', 'cancelled'].includes(selectedDeparture.status) && (
                 <Button
                   onClick={() => setConfirmCompleteOpen(true)}
-                  disabled={completing}
+                  disabled={completing || !canComplete}
+                  title={!canComplete ? 'Tour can be completed on or after its departure date' : undefined}
                   className="font-semibold text-xs flex items-center gap-1.5 shadow-sm"
                 >
                   {completing ? (
@@ -304,19 +332,27 @@ export const GuideManifestPage = () => {
                 <div className="space-y-2">
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-extrabold text-slate-900">
-                      {Math.round(weather.temp || weather.temperature || 29)}°C
+                      {weather.temp != null ? `${Math.round(weather.temp)}°C` : '--'}
                     </span>
                     <span className="text-xs font-semibold text-slate-600 capitalize">
-                      {weather.condition || weather.description || 'Clear Sky'}
+                      {weather.condition || weather.description || 'N/A'}
                     </span>
+                    {weather.isMock && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                        Sample data
+                      </Badge>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 pt-1 border-t border-slate-100">
-                    <div>Humidity: <span className="font-semibold text-slate-700">{weather.humidity || 75}%</span></div>
-                    <div>Wind: <span className="font-semibold text-slate-700">{weather.windSpeed || 12} km/h</span></div>
+                    <div>Humidity: <span className="font-semibold text-slate-700">{weather.humidity != null ? `${weather.humidity}%` : 'N/A'}</span></div>
+                    {/* OpenWeather metric units report wind in m/s */}
+                    <div>Wind: <span className="font-semibold text-slate-700">{weather.windSpeed != null ? `${Math.round(weather.windSpeed * 3.6)} km/h` : 'N/A'}</span></div>
                   </div>
-                  <p className="text-[11px] text-emerald-700 font-medium pt-1">
-                    Ideal conditions for scheduled outdoor group activities.
-                  </p>
+                  {weather.description && (
+                    <p className="text-[11px] text-slate-600 font-medium pt-1 capitalize">
+                      {weather.description}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="py-4 text-xs text-slate-400 text-center">
@@ -390,6 +426,7 @@ export const GuideManifestPage = () => {
                     <TableCell className="text-center">
                       <Checkbox
                         checked={Boolean(item.isCheckedIn)}
+                        disabled={isClosedDeparture}
                         onCheckedChange={() => handleToggleCheckIn(item)}
                         aria-label={`Check in ${item.fullName}`}
                         className="h-5 w-5 align-middle"

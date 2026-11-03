@@ -9,6 +9,7 @@ import {
   getActivityLogs,
   getStaffProfile,
   updateStaffProfile,
+  getAssignableGuides,
 } from '../controllers/adminController.js';
 import { verifyToken } from '../middlewares/authMiddleware.js';
 import { requireAdminOnly, requireRoles } from '../middlewares/roleMiddleware.js';
@@ -18,6 +19,9 @@ const router = Router();
 // Staff Profile (accessible to all verified staff roles & operators)
 router.get('/profile', verifyToken, requireRoles('admin', 'coordinator', 'support', 'guide', 'operator'), getStaffProfile);
 router.patch('/profile', verifyToken, requireRoles('admin', 'coordinator', 'support', 'guide', 'operator'), updateStaffProfile);
+
+// Guide lookup for departure assignment (uid + fullName only)
+router.get('/guides', verifyToken, requireRoles('admin', 'coordinator', 'operator'), getAssignableGuides);
 
 // Strictly Admin-only below
 router.use(verifyToken, requireAdminOnly);

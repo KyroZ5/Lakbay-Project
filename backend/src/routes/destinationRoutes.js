@@ -7,15 +7,15 @@ import {
   updateDestination,
   deleteDestination,
 } from '../controllers/destinationController.js';
-import { verifyToken } from '../middlewares/authMiddleware.js';
+import { verifyToken, optionalToken } from '../middlewares/authMiddleware.js';
 import { requireRoles } from '../middlewares/roleMiddleware.js';
 
 const router = Router();
 
-// Public routes
-router.get('/', getDestinations);
+// Public routes (optionalToken lets staff see unpublished destinations)
+router.get('/', optionalToken, getDestinations);
 router.get('/featured', getFeaturedDestinations);
-router.get('/:id', getDestinationById);
+router.get('/:id', optionalToken, getDestinationById);
 
 // Protected routes (Coordinator & Admin)
 router.post('/', verifyToken, requireRoles('coordinator', 'admin'), createDestination);

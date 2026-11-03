@@ -223,7 +223,7 @@ export const BecomeOperatorPage = () => {
 
                 {existingApp.status === 'approved' && (
                   <Button asChild className="shrink-0 font-bold text-xs gap-1.5 shadow-md">
-                    <a href={import.meta.env.VITE_ADMIN_URL || 'http://localhost:5174'} target="_blank" rel="noopener noreferrer">
+                    <a href={import.meta.env.VITE_ADMIN_URL || 'http://localhost:3001'} target="_blank" rel="noopener noreferrer">
                       Go to Operator Portal <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                     </a>
                   </Button>

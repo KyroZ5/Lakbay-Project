@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RoleRoute } from './RoleRoute';
 import { AdminLayout } from '../components/layout/AdminLayout';
+import { useStaffAuth, getHomePath } from '../contexts/StaffAuthContext';
 
 // Pages
 import { StaffLoginPage } from '../pages/auth/StaffLoginPage';
@@ -19,6 +20,12 @@ import { StaffCustomersPage } from '../pages/administration/StaffCustomersPage';
 import { ReportsPage } from '../pages/administration/ReportsPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
 
+// Send each role to a landing page it can actually load (avoids 403s from admin-only metrics)
+const HomeRedirect = () => {
+  const { role } = useStaffAuth();
+  return <Navigate to={getHomePath(role)} replace />;
+};
+
 export const AdminRoutes = () => {
   return (
     <Routes>
@@ -34,13 +41,13 @@ export const AdminRoutes = () => {
           </RoleRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<HomeRedirect />} />
 
         {/* Dashboard */}
         <Route
           path="dashboard"
           element={
-            <RoleRoute allowedRoles={['admin', 'coordinator', 'support', 'guide', 'operator']}>
+            <RoleRoute allowedRoles={['admin', 'operator']}>
               <DashboardOverviewPage />
             </RoleRoute>
           }
@@ -152,7 +159,7 @@ export const AdminRoutes = () => {
       </Route>
 
       {/* Catch-all */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

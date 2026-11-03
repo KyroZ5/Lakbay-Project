@@ -26,21 +26,38 @@ export const ReportsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Date range filters (default to current month)
-  const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+  // Date range filters (default to current month in Asia/Manila). Built as
+  // plain YYYY-MM-DD strings — toISOString() on local midnight shifts the day.
+  const [initialRange] = useState(() => {
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Manila',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const [y, m] = todayStr.split('-').map(Number);
+    const lastDayNum = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const mm = String(m).padStart(2, '0');
+    return { first: `${y}-${mm}-01`, last: `${y}-${mm}-${String(lastDayNum).padStart(2, '0')}` };
+  });
 
-  const [startDate, setStartDate] = useState(firstDay);
-  const [endDate, setEndDate] = useState(lastDay);
+  const [startDate, setStartDate] = useState(initialRange.first);
+  const [endDate, setEndDate] = useState(initialRange.last);
+  // The range the currently displayed report was generated for (CSV exports this range)
+  const [appliedRange, setAppliedRange] = useState({ startDate: initialRange.first, endDate: initialRange.last });
   const [exporting, setExporting] = useState(false);
 
   const fetchReport = async () => {
+    if (startDate && endDate && startDate > endDate) {
+      notify.error('"From" date must be on or before the "To" date.');
+      return;
+    }
     try {
       setLoading(true);
       setError('');
-      const res = await adminApi.getReports({ startDate, endDate });
+      const res = await adminApi.getReports({ startDate: startDate || undefined, endDate: endDate || undefined });
       setReportData(res.data || res);
+      setAppliedRange({ startDate, endDate });
     } catch (err) {
       console.error('[ReportsPage] Error:', err);
       setError(getErrorMessage(err, 'Failed to generate financial report.'));
@@ -62,24 +79,28 @@ export const ReportsPage = () => {
 
   // Download CSV
   const downloadCSV = async () => {
+    const { startDate: from, endDate: to } = appliedRange;
+    // The axios response interceptor already unwraps response.data, so this is the Blob itself
     const response = await axiosClient.get('/admin/reports', {
       params: {
-        startDate,
-        endDate,
+        startDate: from || undefined,
+        endDate: to || undefined,
         format: 'csv',
       },
       responseType: 'blob',
     });
 
-    const blob = new Blob([response], { type: 'text/csv' });
+    // Prepend a UTF-8 BOM so Excel renders non-ASCII names (e.g. ñ, ₱) correctly
+    const blob = new Blob(['\ufeff', response], { type: 'text/csv;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `lakbay-financial-report-${startDate}-to-${endDate}.csv`;
+    a.download = `lakbay-financial-report-${from || 'all'}-to-${to || 'all'}.csv`;
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+    // Defer revocation so the browser has started the download
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
   };
 
   const handleExportCSV = async () => {

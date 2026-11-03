@@ -12,6 +12,53 @@ const StaffAuthContext = createContext(null);
 
 const STAFF_ROLES = ['coordinator', 'support', 'guide', 'admin', 'operator'];
 
+const CUSTOMER_DENIED_MSG = 'Access Denied: Customer accounts cannot access the Lakbay Staff Portal.';
+const DEACTIVATED_MSG = 'Your staff account has been deactivated. Please contact an Administrator.';
+const isAccessMessage = (msg) => msg === CUSTOMER_DENIED_MSG || msg === DEACTIVATED_MSG;
+
+/**
+ * Resolve the staff role + profile for a Firebase user. Mirrors backend verifyToken:
+ * the Firestore users/{uid} document is authoritative for role & accountStatus; the
+ * token custom claim is only a fallback when the profile can't be read.
+ * Returns { role, profile } or throws an Error with a user-facing message.
+ */
+const resolveStaffAccess = async (firebaseUser) => {
+  const idTokenResult = await firebaseUser.getIdTokenResult(true);
+
+  let userData = null;
+  try {
+    const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+    userData = userSnap.exists() ? userSnap.data() : null;
+  } catch (profileErr) {
+    console.warn('[StaffAuthContext] Direct Firestore read restricted; using token claims:', profileErr.message);
+  }
+
+  const userRole = userData?.role || idTokenResult.claims.role;
+
+  // Strict Check: Reject customer / unknown-role accounts
+  if (!userRole || !STAFF_ROLES.includes(userRole)) {
+    throw new Error(CUSTOMER_DENIED_MSG);
+  }
+
+  // Check deactivated status
+  if (userData && (userData.accountStatus === 'deactivated' || userData.accountStatus === 'disabled')) {
+    throw new Error(DEACTIVATED_MSG);
+  }
+
+  return {
+    role: userRole,
+    profile: userData
+      ? { uid: firebaseUser.uid, ...userData, role: userRole }
+      : {
+          uid: firebaseUser.uid,
+          fullName: firebaseUser.displayName || 'Staff Administrator',
+          email: firebaseUser.email,
+          role: userRole,
+          accountStatus: 'active',
+        },
+  };
+};
+
 export const StaffAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -19,74 +66,40 @@ export const StaffAuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState('');
 
+  const clearSession = () => {
+    setUser(null);
+    setProfile(null);
+    setRole(null);
+  };
+
   // Sync auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // 1. Check custom user claims
-          const idTokenResult = await firebaseUser.getIdTokenResult(true);
-          let userRole = idTokenResult.claims.role;
-
-          // 2. Fetch user profile from Firestore if permitted
-          let userData = null;
-          try {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            const userSnap = await getDoc(userDocRef);
-            userData = userSnap.exists() ? userSnap.data() : null;
-          } catch (profileErr) {
-            console.warn('[StaffAuthContext] Direct Firestore read restricted; using token claims:', profileErr.message);
-          }
-
-          if (!userRole && userData?.role) {
-            userRole = userData.role;
-          }
-
-          // 3. Strict Check: Reject customer accounts
-          if (!userRole || userRole === 'customer' || !STAFF_ROLES.includes(userRole)) {
-            await signOut(auth);
-            setUser(null);
-            setProfile(null);
-            setRole(null);
-            setAuthError('Access Denied: Customer accounts cannot access the Lakbay Staff Portal.');
-            setLoading(false);
-            return;
-          }
-
-          // 4. Check deactivated status
-          if (userData && (userData.accountStatus === 'deactivated' || userData.accountStatus === 'disabled')) {
-            await signOut(auth);
-            setUser(null);
-            setProfile(null);
-            setRole(null);
-            setAuthError('Your staff account has been deactivated. Please contact an Administrator.');
-            setLoading(false);
-            return;
-          }
+          const access = await resolveStaffAccess(firebaseUser);
+          // Ignore stale results if the session changed while we were verifying
+          if (auth.currentUser?.uid !== firebaseUser.uid) return;
 
           // Valid staff member
           setUser(firebaseUser);
-          setRole(userRole);
-          setProfile(userData || {
-            uid: firebaseUser.uid,
-            fullName: firebaseUser.displayName || 'Staff Administrator',
-            email: firebaseUser.email,
-            role: userRole,
-            accountStatus: 'active',
-          });
+          setRole(access.role);
+          setProfile(access.profile);
           setAuthError('');
         } catch (err) {
           console.error('[StaffAuthContext] Verification error:', err);
-          await signOut(auth);
-          setUser(null);
-          setProfile(null);
-          setRole(null);
-          setAuthError(getErrorMessage(err, 'Authentication error verifying staff permissions.'));
+          if (auth.currentUser?.uid === firebaseUser.uid) {
+            await signOut(auth);
+          }
+          clearSession();
+          setAuthError(
+            isAccessMessage(err.message)
+              ? err.message
+              : getErrorMessage(err, 'Authentication error verifying staff permissions.')
+          );
         }
       } else {
-        setUser(null);
-        setProfile(null);
-        setRole(null);
+        clearSession();
       }
       setLoading(false);
     });
@@ -102,47 +115,20 @@ export const StaffAuthProvider = ({ children }) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const loggedInUser = userCredential.user;
 
-    // Verify token claims and firestore role
-    const idTokenResult = await loggedInUser.getIdTokenResult(true);
-    let userRole = idTokenResult.claims.role;
-
-    let userData = null;
+    let access;
     try {
-      const userDocRef = doc(db, 'users', loggedInUser.uid);
-      const userSnap = await getDoc(userDocRef);
-      userData = userSnap.exists() ? userSnap.data() : null;
-    } catch (profileErr) {
-      console.warn('[StaffAuthContext] Direct Firestore profile read restricted in login:', profileErr.message);
-    }
-
-    if (!userRole && userData?.role) {
-      userRole = userData.role;
-    }
-
-    // Rejection rule: Customer accounts cannot access staff portal
-    if (!userRole || userRole === 'customer' || !STAFF_ROLES.includes(userRole)) {
+      access = await resolveStaffAccess(loggedInUser);
+    } catch (err) {
+      // Rejection rule: customer / deactivated accounts are signed straight back out
       await signOut(auth);
-      const errMsg = 'Access Denied: Customer accounts cannot access the Lakbay Staff Portal.';
-      setAuthError(errMsg);
-      throw new Error(errMsg);
-    }
-
-    if (userData && (userData.accountStatus === 'deactivated' || userData.accountStatus === 'disabled')) {
-      await signOut(auth);
-      const errMsg = 'Your staff account has been deactivated. Please contact an Administrator.';
-      setAuthError(errMsg);
-      throw new Error(errMsg);
+      clearSession();
+      if (isAccessMessage(err.message)) setAuthError(err.message);
+      throw err;
     }
 
     setUser(loggedInUser);
-    setRole(userRole);
-    setProfile(userData || {
-      uid: loggedInUser.uid,
-      fullName: loggedInUser.displayName || 'Staff Administrator',
-      email: loggedInUser.email,
-      role: userRole,
-      accountStatus: 'active',
-    });
+    setRole(access.role);
+    setProfile(access.profile);
 
     return loggedInUser;
   };
@@ -152,9 +138,7 @@ export const StaffAuthProvider = ({ children }) => {
    */
   const logout = async () => {
     await signOut(auth);
-    setUser(null);
-    setProfile(null);
-    setRole(null);
+    clearSession();
     setAuthError('');
   };
 
@@ -181,6 +165,26 @@ export const StaffAuthProvider = ({ children }) => {
   };
 
   return <StaffAuthContext.Provider value={value}>{children}</StaffAuthContext.Provider>;
+};
+
+/**
+ * Landing page per role. Only admin & operator have a metrics dashboard
+ * (GET /admin/dashboard is admin-only, /operators/dashboard is operator/admin).
+ */
+export const getHomePath = (role) => {
+  switch (role) {
+    case 'admin':
+    case 'operator':
+      return '/dashboard';
+    case 'coordinator':
+      return '/catalog/packages';
+    case 'support':
+      return '/operations/bookings';
+    case 'guide':
+      return '/operations/guide-manifest';
+    default:
+      return '/login';
+  }
 };
 
 export const useStaffAuth = () => {

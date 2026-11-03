@@ -22,9 +22,12 @@ export const ItineraryMap = ({ itinerary = [], height = '450px', className = '' 
   const stops = [];
   let stopNumber = 1;
 
-  itinerary.forEach((day) => {
-    (day.activities || []).forEach((act) => {
-      if (act.coordinates?.lat && act.coordinates?.lng) {
+  // `itinerary` may be null on legacy documents; skip stops whose coordinates aren't numbers
+  (itinerary || []).forEach((day) => {
+    (day?.activities || []).forEach((act) => {
+      const lat = Number(act?.coordinates?.lat);
+      const lng = Number(act?.coordinates?.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
         stops.push({
           stopNumber,
           dayTitle: day.dayTitle,
@@ -33,8 +36,8 @@ export const ItineraryMap = ({ itinerary = [], height = '450px', className = '' 
           activityName: act.activityName,
           locationName: act.locationName,
           description: act.description,
-          lat: Number(act.coordinates.lat),
-          lng: Number(act.coordinates.lng),
+          lat,
+          lng,
         });
         stopNumber++;
       }
@@ -50,6 +53,9 @@ export const ItineraryMap = ({ itinerary = [], height = '450px', className = '' 
       <MapContainer
         center={[centerLat, centerLng]}
         zoom={stops.length > 1 ? 11 : 13}
+        // Multi-stop routes: frame every marker instead of centering on the first stop
+        bounds={stops.length > 1 ? polylineCoords : undefined}
+        boundsOptions={{ padding: [40, 40] }}
         scrollWheelZoom={false}
         style={{ height: '100%', width: '100%' }}
       >

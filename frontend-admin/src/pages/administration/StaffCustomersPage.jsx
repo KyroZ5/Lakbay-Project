@@ -88,6 +88,7 @@ export const StaffCustomersPage = () => {
       const res = await adminApi.getUsers({
         role: roleFilter || undefined,
         status: statusFilter || undefined,
+        limit: 200,
       });
       setUsers(res.data || res || []);
     } catch (err) {
@@ -107,9 +108,15 @@ export const StaffCustomersPage = () => {
     e.preventDefault();
     if (creating) return;
     const nextErrors = {};
-    if (!createForm.fullName) nextErrors.fullName = 'Full Name is required.';
+    if (!createForm.fullName.trim()) nextErrors.fullName = 'Full Name is required.';
     if (!createForm.email) nextErrors.email = 'Email is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.email.trim()))
+      nextErrors.email = 'Enter a valid email address.';
     if (!createForm.password) nextErrors.password = 'Password is required.';
+    else if (createForm.password.length < 6)
+      nextErrors.password = 'Password must be at least 6 characters.';
+    if (createForm.phone.trim() && !/^\+[1-9]\d{6,14}$/.test(createForm.phone.trim()))
+      nextErrors.phone = 'Use international format, e.g. +639171234567.';
     if (Object.keys(nextErrors).length > 0) {
       setFormErrors(nextErrors);
       return;
@@ -118,7 +125,12 @@ export const StaffCustomersPage = () => {
 
     try {
       setCreating(true);
-      await adminApi.createStaffAccount(createForm);
+      await adminApi.createStaffAccount({
+        ...createForm,
+        fullName: createForm.fullName.trim(),
+        email: createForm.email.trim(),
+        phone: createForm.phone.trim(),
+      });
       notify.success(`Staff account for ${createForm.fullName} (${createForm.role}) created successfully!`);
       setIsCreateModalOpen(false);
       setCreateForm({
@@ -138,7 +150,7 @@ export const StaffCustomersPage = () => {
 
   // Toggle Account Status
   const requestToggleStatus = (userRecord) => {
-    if (userRecord.uid === currentStaffUser?.uid) {
+    if ((userRecord.uid || userRecord.id) === currentStaffUser?.uid) {
       notify.warning('You cannot deactivate your own administrative account.');
       return;
     }
@@ -147,7 +159,7 @@ export const StaffCustomersPage = () => {
 
   const handleToggleStatus = async () => {
     const userRecord = statusTarget;
-    if (!userRecord) return;
+    if (!userRecord || updatingStatus) return;
 
     const currentStatus = userRecord.accountStatus || 'active';
     const targetStatus = currentStatus === 'active' ? 'deactivated' : 'active';
@@ -195,7 +207,7 @@ export const StaffCustomersPage = () => {
     return (
       u.fullName?.toLowerCase().includes(term) ||
       u.email?.toLowerCase().includes(term) ||
-      u.phone?.toLowerCase().includes(term)
+      String(u.phone || '').toLowerCase().includes(term)
     );
   });
 
@@ -263,6 +275,7 @@ export const StaffCustomersPage = () => {
               <SelectItem value="coordinator">Coordinator</SelectItem>
               <SelectItem value="support">Support Agent</SelectItem>
               <SelectItem value="guide">Tour Guide</SelectItem>
+              <SelectItem value="operator">Tour Operator</SelectItem>
               <SelectItem value="customer">Customer</SelectItem>
             </SelectContent>
           </Select>
@@ -344,8 +357,11 @@ export const StaffCustomersPage = () => {
               )
             ) : (
               filtered.map((u) => {
-                const isSelf = u.uid === currentStaffUser?.uid;
-                const isActive = u.accountStatus === 'active';
+                const isSelf = (u.uid || u.id) === currentStaffUser?.uid;
+                // Missing accountStatus is treated as active (matches the badge + toggle logic)
+                const isActive = (u.accountStatus || 'active') === 'active';
+                // Operator roles are provisioned via the Operators page; the role API rejects 'operator'
+                const isOperator = u.role === 'operator';
                 return (
                   <TableRow key={u.id || u.uid}>
                     <TableCell>
@@ -405,9 +421,10 @@ export const StaffCustomersPage = () => {
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={isOperator}
                               onClick={() => {
                                 setSelectedUserForRole(u);
-                                setNewRole(u.role || 'support');
+                                setNewRole(u.role || 'customer');
                               }}
                               className="h-8 w-8 p-0 text-slate-600 hover:text-emerald-600"
                               aria-label={`Change role for ${u.fullName || u.email}`}
@@ -415,7 +432,7 @@ export const StaffCustomersPage = () => {
                               <Edit className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Change Role</TooltipContent>
+                          <TooltipContent>{isOperator ? 'Manage operators from the Operators page' : 'Change Role'}</TooltipContent>
                         </Tooltip>
                         {isSelf ? (
                           <Tooltip>
@@ -522,7 +539,7 @@ export const StaffCustomersPage = () => {
               <Input
                 id="staff-password"
                 type="password"
-                placeholder="••••••••••••"
+                placeholder="At least 6 characters"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 required
@@ -562,7 +579,10 @@ export const StaffCustomersPage = () => {
                   placeholder="+639171234567"
                   value={createForm.phone}
                   onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  aria-invalid={Boolean(formErrors.phone)}
+                  aria-describedby={formErrors.phone ? 'staff-phone-error' : undefined}
                 />
+                <FieldError id="staff-phone-error">{formErrors.phone}</FieldError>
               </div>
             </div>
 

@@ -255,7 +255,7 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_API_BASE_URL=/api
 VITE_ENABLE_DEMO_LOGIN=false
-VITE_ADMIN_URL=http://localhost:5174
+VITE_ADMIN_URL=http://localhost:3001
 
 # Stripe Configuration
 STRIPE_SECRET_KEY=sk_test_...
@@ -366,62 +366,14 @@ From the Staff IAM page (`/administration/staff-customers`), administrators can 
 
 ## Deployment to Vercel
 
-Lakbay is deployed to Vercel with three separate projects:
+The full, current deployment guide is **[VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md)**: API reference, the three Vercel projects (`backend`, `frontend-customer`, `frontend-admin`), every environment variable, Stripe webhook and Firebase setup, CI/CD, and troubleshooting.
 
-| Project | Domain | Directory |
-|---------|--------|-----------|
-| Customer Frontend | `https://lakbay.ph` | `frontend-customer/` |
-| Admin Portal | `https://admin.lakbay.ph` | `frontend-admin/` |
-| Backend API | `https://api.lakbay.ph` | `backend/` |
+Key points:
 
-### Prerequisites
-
-- GitHub repository connected to Vercel
-- Firebase project with Authentication + Firestore enabled
-- Stripe account with webhook endpoint configured
-- Vercel CLI installed: `npm i -g vercel`
-
-### One-Time Setup
-
-1. **Link each project to Vercel** (run locally once):
-   ```bash
-   cd frontend-customer && vercel
-   cd frontend-admin && vercel
-   cd backend && vercel
-   ```
-
-2. **Add GitHub Secrets** (repo → Settings → Secrets and variables → Actions):
-   - `VERCEL_TOKEN` — from Vercel dashboard → Settings → Tokens
-   - `VERCEL_ORG_ID` — from Vercel dashboard → Settings → General
-   - `VERCEL_PROJECT_ID_CUSTOMER` — from customer project settings
-   - `VERCEL_PROJECT_ID_ADMIN` — from admin project settings
-   - `VERCEL_PROJECT_ID_BACKEND` — from backend project settings
-   - `FIREBASE_SERVICE_ACCOUNT_KEY` — contents of `backend/serviceAccountKey.json`
-   - `STRIPE_SECRET_KEY` — from Stripe dashboard
-   - `STRIPE_WEBHOOK_SECRET` — from Stripe webhook endpoint
-   - `ADMIN_PASSWORD` — `AdminPassword123` (or your choice)
-   - `ADMIN_EMAIL` — `admin@lakbay.ph`
-   - `CLIENT_URL` — `https://lakbay.ph`
-   - `ADMIN_URL` — `https://admin.lakbay.ph`
-
-3. **Set Vercel Environment Variables** (each project → Settings → Environment Variables):
-   - **Backend:** `FIREBASE_SERVICE_ACCOUNT_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLIENT_URL`, `ADMIN_URL`
-   - **Frontends:** `VITE_API_BASE_URL`, `VITE_FIREBASE_*` (6 public values), `VITE_ENABLE_DEMO_LOGIN`, `VITE_ADMIN_URL`
-
-4. **Configure Stripe Webhook**:
-   - Point to: `https://api.lakbay.ph/api/webhooks/stripe`
-   - Events: `checkout.session.completed`, `checkout.session.expired`
-
-### Deployment
-
-Push to `main` — GitHub Actions automatically builds and deploys:
-
-- **CI** (`.github/workflows/ci.yml`): builds all 3 projects on every PR/push
-- **Deploy Customer** (`.github/workflows/deploy-customer.yml`): deploys frontend-customer to Vercel
-- **Deploy Admin** (`.github/workflows/deploy-admin.yml`): deploys frontend-admin to Vercel
-- **Deploy Backend** (`.github/workflows/deploy-backend.yml`): deploys backend serverless functions to Vercel
-
-PRs automatically get preview deployments for both frontends.
+- Secrets (Stripe, Firebase service account, Geoapify, OpenWeather) go only in **Vercel Project Settings > Environment Variables** on the backend project. Never in GitHub secrets, `vercel.json`, or any committed file.
+- The backend reads the Firebase service account from `FIREBASE_SERVICE_ACCOUNT_BASE64` (recommended), `FIREBASE_SERVICE_ACCOUNT_JSON`, or `FIREBASE_PROJECT_ID` + `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY`.
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` are only for the local `seed:admin` script; do not set them on Vercel.
+- GitHub Actions deploys need only `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID_BACKEND/CUSTOMER/ADMIN`.
 
 ---
 

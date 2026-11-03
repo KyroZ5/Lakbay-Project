@@ -9,6 +9,7 @@ services:
       - "${PORT:-5000}:5000"
     environment:
       - NODE_ENV=${NODE_ENV:-development}
+      - TRUST_PROXY=${TRUST_PROXY:-1}
       - PORT=5000
       - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
       - ADMIN_URL=${ADMIN_URL:-http://localhost:3001}
@@ -45,7 +46,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
-        - VITE_ADMIN_URL=${VITE_ADMIN_URL:-http://localhost:5174}
+        - VITE_ADMIN_URL=${VITE_ADMIN_URL:-http://localhost:3001}
         - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-}
         - VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN:-}
         - VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID:-}
@@ -69,7 +70,7 @@ services:
       args:
         - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
         - VITE_ENABLE_DEMO_LOGIN=${VITE_ENABLE_DEMO_LOGIN:-false}
-        - VITE_ADMIN_URL=${VITE_ADMIN_URL:-http://localhost:5174}
+        - VITE_ADMIN_URL=${VITE_ADMIN_URL:-http://localhost:3001}
         - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-}
         - VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN:-}
         - VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID:-}

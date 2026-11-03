@@ -33,9 +33,10 @@ export const Navbar = () => {
     if (signingOut) return;
     try {
       setSigningOut(true);
+      // Leave protected routes first, otherwise ProtectedRoute redirects to /login on sign-out
+      navigate('/', { replace: true });
       await logout();
       notify.success('Signed out');
-      navigate('/');
     } catch (err) {
       notify.error(err, 'Failed to sign out. Please try again.');
     } finally {
@@ -66,22 +67,40 @@ export const Navbar = () => {
   const closeMobile = () => setMobileOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/40 bg-white/80 backdrop-blur-xl shadow-lg shadow-white/10">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 transition-transform hover:scale-102">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/20">
-            <Compass className="h-6 w-6 stroke-[2.2]" />
-          </div>
-          <div>
-            <span className="text-2xl font-black tracking-tight text-slate-900 font-heading">
-              Lakbay<span className="text-emerald-600">.ph</span>
-            </span>
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 -mt-1">
-              Philippine Tours
-            </span>
-          </div>
-        </Link>
+    <header className="sticky top-0 z-50 w-full">
+      {/* Announcement ribbon */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-700 bg-[length:200%_auto] animate-gradient-x text-white">
+        <div className="container mx-auto flex h-8 items-center justify-center gap-2 px-4 text-[11px] font-semibold tracking-wide sm:text-xs">
+          <span className="hidden sm:inline">🎉</span>
+          <span>
+            Dry-season seats opening — book early for Palawan &amp; Visayas departures
+          </span>
+          <Link
+            to="/packages"
+            className="hidden rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold underline-offset-2 hover:bg-white/25 hover:underline sm:inline-block"
+          >
+            Browse tours →
+          </Link>
+        </div>
+      </div>
+
+      <div className="border-b border-white/40 bg-white/80 backdrop-blur-xl shadow-lg shadow-white/10">
+        <div className="container mx-auto flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
+          {/* Brand Logo */}
+          <Link to="/" className="flex items-center gap-2.5 transition-transform hover:scale-102">
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 bg-[length:200%_auto] animate-gradient-x text-white shadow-md shadow-emerald-500/30">
+              <span className="absolute inset-0 rounded-xl ring-1 ring-white/30" />
+              <Compass className="h-6 w-6 stroke-[2.2]" />
+            </div>
+            <div>
+              <span className="text-2xl font-black tracking-tight text-slate-900 font-heading">
+                Lakbay<span className="text-gradient">.ph</span>
+              </span>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 -mt-1">
+                Philippine Tours
+              </span>
+            </div>
+          </Link>
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-8">
@@ -158,10 +177,13 @@ export const Navbar = () => {
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-              <Button asChild variant="ghost" className="font-semibold text-slate-700">
+              <Button asChild variant="ghost" className="font-semibold text-slate-700 hover:text-emerald-700 hover:bg-emerald-50">
                 <Link to="/login">Log in</Link>
               </Button>
-              <Button asChild className="font-semibold shadow-md shadow-emerald-500/20">
+              <Button
+                asChild
+                className="font-semibold shadow-lg shadow-emerald-500/25 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 transition-all hover:shadow-emerald-500/40"
+              >
                 <Link to="/register">Register</Link>
               </Button>
             </div>
@@ -211,30 +233,17 @@ export const Navbar = () => {
                   <p className="px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
                     Customer Portal
                   </p>
-                  <Link
-                    to="/dashboard"
-                    onClick={closeMobile}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <Compass className="h-4 w-4 text-emerald-600" />
-                    My Dashboard
-                  </Link>
-                  <Link
-                    to="/dashboard/bookings"
-                    onClick={closeMobile}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <Calendar className="h-4 w-4 text-emerald-600" />
-                    My Bookings
-                  </Link>
-                  <Link
-                    to="/dashboard/profile"
-                    onClick={closeMobile}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <User className="h-4 w-4 text-emerald-600" />
-                    My Profile
-                  </Link>
+                  {accountLinks.map(({ to, icon: Icon, label }) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={closeMobile}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <Icon className="h-4 w-4 text-emerald-600" />
+                      {label}
+                    </Link>
+                  ))}
                   <Link
                     to="/become-operator"
                     onClick={closeMobile}
@@ -269,6 +278,7 @@ export const Navbar = () => {
             </div>
           </SheetContent>
         </Sheet>
+        </div>
       </div>
     </header>
   );

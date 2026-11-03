@@ -22,3 +22,13 @@ export const sendError = (res, message = 'An error occurred', statusCode = 500, 
 
   return res.status(statusCode).json(responsePayload);
 };
+
+/**
+ * Build an Error carrying an HTTP status, so validation failures thrown inside
+ * Firestore transactions reach the errorHandler as 4xx instead of 500.
+ */
+export const httpError = (message, statusCode = 400) => {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+};

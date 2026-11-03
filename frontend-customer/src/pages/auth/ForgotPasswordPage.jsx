@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent } from '../../components/ui/card';
 import { getErrorMessage } from '../../lib/notify';
+import { AuthShell } from '../../components/common/AuthShell';
+import { getSafeRedirect, withRedirect } from '../../lib/redirect';
 import { Compass, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 
 export const ForgotPasswordPage = () => {
   const { resetPassword } = useAuth();
+  const location = useLocation();
+  const loginLink = withRedirect('/login', getSafeRedirect(location.search));
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,19 +37,11 @@ export const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <Link to="/" className="inline-flex items-center gap-2 mb-2">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-              <Compass className="h-6 w-6 stroke-[2.2]" />
-            </div>
-            <span className="text-2xl font-black text-slate-900 font-heading">
-              Lakbay<span className="text-emerald-600">.ph</span>
-            </span>
-          </Link>
+    <AuthShell>
+      <div className="w-full space-y-6">
+        <div className="text-center lg:text-left">
           <h2 className="text-2xl font-extrabold text-slate-900 font-heading">
-            Reset Your Password
+            Reset Your <span className="text-gradient">Password</span>
           </h2>
           <p className="mt-1 text-xs text-slate-500">
             Enter your registered email to receive a password reset link.
@@ -69,7 +65,7 @@ export const ForgotPasswordPage = () => {
                   We sent a reset link to <span className="font-semibold">{email}</span>. Click the link in the email to set a new password.
                 </p>
                 <Button asChild variant="outline" className="mt-6 text-xs font-semibold">
-                  <Link to="/login">
+                  <Link to={loginLink}>
                     <ArrowLeft className="h-4 w-4 mr-1.5" />
                     Back to Login
                   </Link>
@@ -108,7 +104,7 @@ export const ForgotPasswordPage = () => {
 
                 <div className="text-center pt-2">
                   <Link
-                    to="/login"
+                    to={loginLink}
                     className="inline-flex items-center text-xs font-semibold text-slate-600 hover:text-emerald-700"
                   >
                     <ArrowLeft className="h-3.5 w-3.5 mr-1" />
@@ -120,6 +116,6 @@ export const ForgotPasswordPage = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AuthShell>
   );
 };

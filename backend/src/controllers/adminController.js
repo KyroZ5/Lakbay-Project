@@ -10,13 +10,21 @@ import { parseLimit } from '../utils/query.js';
  */
 export const getDashboardMetrics = async (req, res, next) => {
   try {
-    // 1. Counts via aggregation queries (avoid downloading whole collections)
+    const today = todayInManila();
+
+    // 1. Counts via aggregation queries (avoid downloading whole collections).
+    // Departures/bookings use field projections (.select) so only the fields the
+    // metrics need are transferred — keeps the serverless function fast and lean
+    // without requiring new composite indexes.
     const [custCount, destCount, pkgCount, depSnap, bookSnap] = await Promise.all([
       db.collection('users').where('role', '==', 'customer').count().get(),
       db.collection('destinations').count().get(),
       db.collection('tourPackages').count().get(),
-      db.collection('departures').get(),
-      db.collection('bookings').get(),
+      db.collection('departures').where('departureDate', '>=', today).select('departureDate', 'status').get(),
+      db
+        .collection('bookings')
+        .select('bookingStatus', 'paymentStatus', 'totalPrice', 'createdAt', 'packageName', 'numberOfTravelers')
+        .get(),
     ]);
 
     const totalCustomers = custCount.data().count;
@@ -34,7 +42,6 @@ export const getDashboardMetrics = async (req, res, next) => {
     const monthlyRevenue = {};
     const packagePopularity = {};
 
-    const today = todayInManila();
     let upcomingDeparturesCount = 0;
 
     depSnap.forEach((doc) => {
@@ -132,10 +139,14 @@ export const getUsers = async (req, res, next) => {
       query = query.where('accountStatus', '==', status);
     }
 
-    const snapshot = await query.limit(parseLimit(limit)).get();
+    // Search is in-memory, so only limit the Firestore query when not searching;
+    // otherwise matches beyond the first page were silently missed.
+    const hasSearch = typeof search === 'string' && search.trim();
+    const pageSize = parseLimit(limit);
+    const snapshot = await (hasSearch ? query.get() : query.limit(pageSize).get());
     let users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    if (search && search.trim()) {
+    if (hasSearch) {
       const term = search.trim().toLowerCase();
       users = users.filter(
         (u) =>
@@ -143,6 +154,7 @@ export const getUsers = async (req, res, next) => {
           u.email?.toLowerCase().includes(term) ||
           u.phone?.toLowerCase().includes(term)
       );
+      users = users.slice(0, pageSize);
     }
 
     return sendSuccess(res, users, `Retrieved ${users.length} user(s)`);
@@ -164,22 +176,45 @@ export const createStaffAccount = async (req, res, next) => {
       return sendError(res, `Invalid role. Allowed staff roles: ${validRoles.join(', ')}`, 400);
     }
 
-    if (!email || !password || !fullName) {
+    if (typeof email !== 'string' || typeof password !== 'string' || typeof fullName !== 'string' ||
+        !email.trim() || !password || !fullName.trim()) {
       return sendError(res, 'Email, password, and fullName are required', 400);
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return sendError(res, 'A valid email address is required', 400);
+    }
+    if (password.length < 6) {
+      return sendError(res, 'Password must be at least 6 characters', 400);
+    }
+    const phoneStr = typeof phone === 'string' ? phone.trim() : '';
 
     if (!auth) {
       return sendError(res, 'Firebase Auth is unavailable', 503);
     }
 
-    // 1. Create in Firebase Auth
-    const userRecord = await auth.createUser({
-      email: email.trim(),
-      password,
-      displayName: fullName.trim(),
-      phoneNumber: phone.trim() || undefined,
-      emailVerified: true,
-    });
+    // 1. Create in Firebase Auth. Firebase only accepts E.164 phone numbers
+    //    (e.g. +639171234567); local formats are kept in Firestore only.
+    let userRecord;
+    try {
+      userRecord = await auth.createUser({
+        email: email.trim(),
+        password,
+        displayName: fullName.trim(),
+        phoneNumber: /^\+[1-9]\d{6,14}$/.test(phoneStr) ? phoneStr : undefined,
+        emailVerified: true,
+      });
+    } catch (authErr) {
+      const AUTH_ERRORS = {
+        'auth/email-already-exists': ['An account with this email already exists', 409],
+        'auth/phone-number-already-exists': ['An account with this phone number already exists', 409],
+        'auth/invalid-email': ['A valid email address is required', 400],
+        'auth/invalid-password': ['Password must be at least 6 characters', 400],
+        'auth/invalid-phone-number': ['Phone number must be in E.164 format (e.g. +639171234567)', 400],
+      };
+      const mapped = AUTH_ERRORS[authErr.code];
+      if (mapped) return sendError(res, mapped[0], mapped[1]);
+      throw authErr;
+    }
 
     // 2. Set Custom User Claim for the role
     await auth.setCustomUserClaims(userRecord.uid, { role });
@@ -190,7 +225,7 @@ export const createStaffAccount = async (req, res, next) => {
       uid: userRecord.uid,
       fullName: fullName.trim(),
       email: email.trim(),
-      phone: phone.trim(),
+      phone: phoneStr,
       emergencyContact: '',
       role,
       accountStatus: 'active',
@@ -285,11 +320,19 @@ export const setUserRole = async (req, res, next) => {
       return sendError(res, 'Cannot revoke your own admin role', 400);
     }
 
+    // Check existence first: previously the custom claim was set and THEN the
+    // Firestore update threw NOT_FOUND (500), leaving Auth and Firestore out of sync.
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return sendError(res, 'User not found', 404);
+    }
+
     if (auth) {
       await auth.setCustomUserClaims(uid, { role });
     }
 
-    await db.collection('users').doc(uid).update({
+    await userRef.update({
       role,
       updatedAt: new Date().toISOString(),
     });
@@ -300,7 +343,7 @@ export const setUserRole = async (req, res, next) => {
       action: 'UPDATE_USER_ROLE',
       targetType: 'user',
       targetId: uid,
-      metadata: { newRole: role },
+      metadata: { previousRole: userDoc.data().role || null, newRole: role },
     });
 
     return sendSuccess(res, { uid, role }, `User role changed to ${role}`);
@@ -372,9 +415,11 @@ export const getReports = async (req, res, next) => {
       return res.status(200).send(csvContent);
     }
 
-    // Default JSON response
+    // Default JSON response. Revenue rule matches the dashboard: only Paid
+    // bookings that are Confirmed/Completed (a Cancelled booking whose refund
+    // failed stays paymentStatus 'Paid' and must not count as revenue).
     const totalCollected = bookings
-      .filter((b) => b.paymentStatus === 'Paid')
+      .filter((b) => b.paymentStatus === 'Paid' && (b.bookingStatus === 'Confirmed' || b.bookingStatus === 'Completed'))
       .reduce((sum, b) => sum + Number(b.totalPrice || 0), 0);
 
     return sendSuccess(res, {
@@ -460,6 +505,11 @@ export const updateStaffProfile = async (req, res, next) => {
       updatedAt: new Date().toISOString(),
     };
 
+    for (const [key, val] of Object.entries({ fullName, phone, bio })) {
+      if (val !== undefined && typeof val !== 'string') {
+        return sendError(res, `${key} must be a string`, 400);
+      }
+    }
     if (fullName !== undefined) {
       const trimmed = fullName.trim();
       if (!trimmed) return sendError(res, 'Full name cannot be empty', 400);
@@ -467,7 +517,12 @@ export const updateStaffProfile = async (req, res, next) => {
     }
     if (phone !== undefined) updates.phone = phone.trim();
     if (bio !== undefined) updates.bio = bio.trim();
-    if (languages !== undefined) updates.languages = languages;
+    if (languages !== undefined) {
+      if (!Array.isArray(languages) && typeof languages !== 'string') {
+        return sendError(res, 'languages must be a list or string', 400);
+      }
+      updates.languages = languages;
+    }
     if (emergencyContact !== undefined) updates.emergencyContact = emergencyContact;
 
     await docRef.update(updates);
@@ -492,6 +547,26 @@ export const updateStaffProfile = async (req, res, next) => {
 
     const updated = await docRef.get();
     return sendSuccess(res, { id: userId, ...updated.data() }, 'Profile updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 10. Assignable tour guides (Admin / Coordinator / Operator)
+ * Narrow lookup for departure guide assignment: returns ONLY uid + fullName of
+ * active guides (no emails/phones), so non-admins never need GET /admin/users.
+ */
+export const getAssignableGuides = async (req, res, next) => {
+  try {
+    const snapshot = await db.collection('users').where('role', '==', 'guide').get();
+    const guides = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .filter((u) => (u.accountStatus || 'active') === 'active')
+      .map((u) => ({ uid: u.uid || u.id, fullName: u.fullName || '' }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+    return sendSuccess(res, guides, `Retrieved ${guides.length} guide(s)`);
   } catch (error) {
     next(error);
   }

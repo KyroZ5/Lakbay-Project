@@ -26,9 +26,10 @@ export const DashboardLayout = () => {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
+      // Leave protected routes first, otherwise ProtectedRoute redirects to /login on sign-out
+      navigate('/', { replace: true });
       await logout();
       notify.success('You have been signed out.');
-      navigate('/');
     } catch (err) {
       notify.error(err, 'Failed to sign out. Please try again.');
     } finally {
@@ -54,15 +55,19 @@ export const DashboardLayout = () => {
     <>
       <div>
         {/* User Profile Snippet */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 mb-6">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-sm">
-            {(profile?.fullName || user?.email || 'U')[0].toUpperCase()}
-          </div>
-          <div className="overflow-hidden">
-            <h4 className="font-bold text-slate-900 text-sm truncate">
-              {profile?.fullName || 'Traveler'}
-            </h4>
-            <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-500 p-4 mb-6 shadow-lg shadow-emerald-500/20">
+          <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15" />
+          <div className="pointer-events-none absolute -bottom-10 -left-4 h-20 w-20 rounded-full bg-white/10" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-emerald-700 font-black text-sm ring-2 ring-white/50 shadow">
+              {(profile?.fullName || user?.email || 'U')[0].toUpperCase()}
+            </div>
+            <div className="overflow-hidden text-white">
+              <h4 className="font-bold text-sm truncate drop-shadow-sm">
+                {profile?.fullName || 'Traveler'}
+              </h4>
+              <p className="text-[11px] text-emerald-50/85 truncate">{user?.email}</p>
+            </div>
           </div>
         </div>
 
@@ -74,14 +79,16 @@ export const DashboardLayout = () => {
               to={item.path}
               onClick={() => setSidebarOpen(false)}
               aria-current={isActive(item) ? 'page' : undefined}
-              className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 isActive(item)
-                  ? 'bg-emerald-50 text-emerald-700 shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm ring-1 ring-emerald-200/70 translate-x-0.5'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-0.5'
               }`}
             >
               <div className="flex items-center gap-3">
-                <item.icon className={`h-4 w-4 ${isActive(item) ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isActive(item) ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30' : 'bg-slate-100 text-slate-400'}`}>
+                  <item.icon className="h-3.5 w-3.5" />
+                </span>
                 <span>{item.label}</span>
               </div>
               {isActive(item) && <ChevronRight className="h-4 w-4 text-emerald-600" />}
@@ -143,13 +150,17 @@ export const DashboardLayout = () => {
       </Sheet>
 
       {/* Desktop Sidebar Navigation */}
-      <aside className="hidden md:flex sticky top-20 z-40 h-[calc(100vh-80px)] w-64 shrink-0 border-r border-slate-200 bg-white p-5 flex-col justify-between">
+      <aside className="hidden md:flex sticky top-28 z-40 h-[calc(100vh-112px)] w-64 shrink-0 border-r border-slate-200 bg-white p-5 flex-col justify-between">
         {sidebarBody}
       </aside>
 
       {/* Main Dashboard Content Area */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl overflow-y-auto">
-        <Outlet />
+      <main className="relative flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl overflow-y-auto">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-emerald-50/70 to-transparent" />
+        <div className="pointer-events-none absolute right-8 top-40 h-40 w-40 rounded-full bg-teal-200/25 blur-3xl" />
+        <div className="relative">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

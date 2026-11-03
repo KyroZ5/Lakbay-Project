@@ -83,7 +83,7 @@ export const DestinationsPage = () => {
     }
   };
 
-  const categories = ['All', 'Island', 'Beach', 'Heritage', 'Nature', 'Mountain'];
+  const categories = ['All', 'Island', 'Beach', 'Heritage', 'Cultural', 'Nature', 'Mountain'];
   const hasActiveFilters = Boolean(search || category);
   // Skeleton only when there are no cards yet; refreshes keep the current cards visible
   const showSkeleton = loading && destinations.length === 0;
@@ -91,21 +91,33 @@ export const DestinationsPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="max-w-3xl mb-10">
-          <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
-            Archipelago Catalog
-          </Badge>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 font-heading">
-            Explore Philippine Destinations
-          </h1>
-          <p className="mt-3 text-slate-600 text-base">
-            Discover tropical archipelagos, coastal sanctuaries, historical towns, and highland ridges across Luzon, Visayas, and Mindanao.
-          </p>
+        {/* Header banner */}
+        <div className="relative mb-10 overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl shadow-slate-300/60">
+          <img src="/images/el-nido.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-50" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/85 to-slate-900/40" />
+          <div className="orb orb-emerald -left-10 -top-12 h-48 w-48 opacity-50" />
+          <div className="relative px-6 py-12 sm:px-10 sm:py-14 max-w-3xl">
+            <Badge className="bg-emerald-500/25 text-emerald-300 border-emerald-500/30 font-semibold mb-3 px-3 py-1">
+              Archipelago Catalog
+            </Badge>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-heading">
+              Explore Philippine <span className="text-gradient">Destinations</span>
+            </h1>
+            <p className="mt-3 text-slate-300 text-base max-w-2xl">
+              Discover tropical archipelagos, coastal sanctuaries, historical towns, and highland ridges across Luzon, Visayas, and Mindanao.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-wider">
+              {['Luzon', 'Visayas', 'Mindanao'].map((region) => (
+                <span key={region} className="rounded-full border border-white/25 bg-white/10 px-3 py-1 backdrop-blur-sm">
+                  {region}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Search & Filter Toolbar */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm mb-10">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/50 mb-10 ring-1 ring-white/60">
           <div className="flex flex-col md:flex-row items-center gap-4 justify-between">
             {/* Search Input */}
             <form onSubmit={handleSearchSubmit} className="relative w-full md:w-96">
@@ -210,19 +222,23 @@ export const DestinationsPage = () => {
             {destinations.map((dest) => (
               <Card
                 key={dest.id}
-                className="group overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
+                className="group card-tilt overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm flex flex-col justify-between"
               >
                 <div>
                   <div className="relative h-60 overflow-hidden">
                     <img
-                      src={dest.imageUrls?.[0] || 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=800&q=80'}
+                      src={dest.imageUrls?.[0] || '/images/el-nido.jpg'}
                       alt={dest.name}
-                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute top-3 left-3">
-                      <Badge className="bg-emerald-600/90 text-white font-bold text-xs backdrop-blur-sm">
+                      <Badge className="bg-emerald-600/90 text-white font-bold text-xs backdrop-blur-sm shadow-md">
                         {dest.category || 'Island'}
                       </Badge>
+                    </div>
+                    <div className="absolute top-3 right-3 flex h-9 w-9 translate-y-2 items-center justify-center rounded-full bg-white/95 text-emerald-700 opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                      <ArrowRight className="h-4 w-4 -rotate-45" />
                     </div>
                   </div>
 

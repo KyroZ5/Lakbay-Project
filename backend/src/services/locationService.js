@@ -28,7 +28,14 @@ const getCached = (key) => {
   return item.data;
 };
 
+// Bound memory: autocomplete keys come straight from a public query param.
+const MAX_CACHE_ENTRIES = 1000;
+const MAX_QUERY_LENGTH = 200;
+
 const setCache = (key, data) => {
+  if (cache.size >= MAX_CACHE_ENTRIES && !cache.has(key)) {
+    cache.delete(cache.keys().next().value); // evict oldest insertion
+  }
   cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 };
 
@@ -36,9 +43,11 @@ const setCache = (key, data) => {
  * Autocomplete location search via Geoapify or fallback
  */
 export const searchPlaces = async (query) => {
-  if (!query || query.trim().length === 0) {
+  // Non-string input (e.g. ?query=a&query=b arrives as an array) used to crash on .trim()
+  if (typeof query !== 'string' || query.trim().length === 0) {
     return [];
   }
+  query = query.slice(0, MAX_QUERY_LENGTH);
 
   const normalizedQuery = query.trim().toLowerCase();
   const cacheKey = `autocomplete:${normalizedQuery}`;
@@ -56,10 +65,10 @@ export const searchPlaces = async (query) => {
           filter: 'countrycode:ph', // Prioritize Philippine destinations
           limit: 8,
         },
-        timeout: 5000,
+        timeout: 3000, // keep upstream calls well inside the serverless time budget
       });
 
-      const results = (response.data.features || []).map((feature) => ({
+      const results = (response.data?.features || []).filter((f) => f?.properties).map((feature) => ({
         formatted: feature.properties.formatted,
         name: feature.properties.name || feature.properties.formatted,
         city: feature.properties.city || feature.properties.county || '',
@@ -98,7 +107,8 @@ export const searchPlaces = async (query) => {
  * Forward geocoding to resolve address/place name into coordinates
  */
 export const geocodeAddress = async (address) => {
-  if (!address) return { lat: 14.5995, lng: 120.9842 }; // Default Manila
+  if (typeof address !== 'string' || !address.trim()) return { lat: 14.5995, lng: 120.9842 }; // Default Manila
+  address = address.slice(0, MAX_QUERY_LENGTH);
 
   const cacheKey = `geocode:${address.toLowerCase()}`;
   const cached = getCached(cacheKey);
@@ -114,11 +124,11 @@ export const geocodeAddress = async (address) => {
           apiKey,
           limit: 1,
         },
-        timeout: 5000,
+        timeout: 3000, // keep upstream calls well inside the serverless time budget
       });
 
-      const feature = response.data.features?.[0];
-      if (feature) {
+      const feature = response.data?.features?.[0];
+      if (feature?.properties) {
         const coords = {
           lat: feature.properties.lat,
           lng: feature.properties.lon,

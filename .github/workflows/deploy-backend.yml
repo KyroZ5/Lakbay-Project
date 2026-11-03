@@ -8,9 +8,28 @@ on:
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
+# Prebuilt deploy flow (https://vercel.com/kb/guide/how-can-i-use-github-actions-with-vercel):
+# env vars and project settings come from the Vercel project via 'vercel pull',
+# the build runs here with 'vercel build', and the output is uploaded as-is.
+# Do NOT also enable the Vercel Git integration for this project, or every push deploys twice.
+#
+# The Vercel CLI steps run from the REPO ROOT: the Vercel project's Root Directory
+# must be set to 'backend' (Settings > Build and Deployment), and the CLI applies it.
+# Running the CLI inside backend/ with Root Directory set would resolve backend/backend.
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_BACKEND }}
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,23 +37,27 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: backend
-
-      - name: Backend syntax check
-        run: node --check src/**/*.js
-        working-directory: backend
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+        run: npm install -g vercel@63.1.2
 
-      - name: Deploy Backend to Vercel Production
-        run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
-        working-directory: backend
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_BACKEND }}
+      - name: Install backend dependencies
+        run: npm install
+
+      - name: Backend syntax check
+        run: find src api -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Pull Vercel project settings and env (production)
+        working-directory: .
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build with Vercel
+        working-directory: .
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy prebuilt output to production
+        working-directory: .
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

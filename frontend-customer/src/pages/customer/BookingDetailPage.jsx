@@ -14,6 +14,7 @@ import { EmptyState, ErrorState } from '../../components/common/DataStates';
 import { LoadingRegion } from '../../components/common/Skeletons';
 import { FieldError } from '../../components/common/FieldError';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { daysUntil } from '../../lib/dates';
 import { notify, getErrorMessage } from '../../lib/notify';
 import {
   Calendar,
@@ -141,6 +142,7 @@ export const BookingDetailPage = () => {
   const fetchBooking = async () => {
     setLoading(true);
     setLoadError(null);
+    setExistingReview(null);
     try {
       const res = await bookingsApi.getById(id);
       setBooking(res.data);
@@ -233,20 +235,20 @@ export const BookingDetailPage = () => {
     );
   }
 
-  // Calculate days remaining until departure date
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const depDate = new Date(booking.departureDate);
-  depDate.setHours(0, 0, 0, 0);
-  const diffTime = depDate.getTime() - today.getTime();
-  const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  const cutoffDays = booking.cancellationCutoffDays || 7;
+  // Days until departure in Manila calendar days (same basis as the backend)
+  const daysRemaining = daysUntil(booking.departureDate);
+  const cutoffDays = booking.cancellationCutoffDays ?? 7;
   const isEligibleForAutoRefund = daysRemaining >= cutoffDays;
+  // Unpaid bookings have nothing to refund, so the backend cancels them immediately
+  const isUnpaid = booking.paymentStatus !== 'Paid';
 
   const canCancel = ['Pending', 'Confirmed'].includes(booking.bookingStatus) && daysRemaining > 0;
+  // A past-cutoff request already sent to support shouldn't be filed again
+  const cancellationPending = Boolean(booking.cancellationRequested) && booking.bookingStatus !== 'Cancelled';
+  // Backend accepts reviews only after the departure date has passed
   const isCompletedTour =
     booking.bookingStatus === 'Completed' ||
-    (booking.bookingStatus === 'Confirmed' && daysRemaining <= 0);
+    (booking.bookingStatus === 'Confirmed' && daysRemaining < 0);
 
   const handleConfirmCancel = async () => {
     if (cancelling) return;
@@ -693,6 +695,11 @@ export const BookingDetailPage = () => {
             ) : (
               <p>This trip departure date has passed.</p>
             )}
+            {cancellationPending && (
+              <p className="mt-1 font-semibold text-amber-700">
+                Cancellation request submitted — our support team is reviewing it.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -706,7 +713,7 @@ export const BookingDetailPage = () => {
               </Button>
             )}
 
-            {canCancel && (
+            {canCancel && !cancellationPending && (
               <Button
                 variant="outline"
                 onClick={() => setCancelModalOpen(true)}
@@ -731,14 +738,24 @@ export const BookingDetailPage = () => {
         }
         description={`Please review the cancellation cutoff policy for ${booking.packageName} before proceeding.`}
         cancelLabel="Keep My Booking"
-        confirmLabel={isEligibleForAutoRefund ? 'Confirm & Trigger Refund' : 'Submit for Review'}
+        confirmLabel={isUnpaid ? 'Confirm Cancellation' : isEligibleForAutoRefund ? 'Confirm & Trigger Refund' : 'Submit for Review'}
         loadingLabel="Processing..."
         loading={cancelling}
         onConfirm={handleConfirmCancel}
       >
         <div className="space-y-4">
           {/* Auto-refund vs Review Alert */}
-          {isEligibleForAutoRefund ? (
+          {isUnpaid ? (
+            <div className="rounded-xl bg-slate-50 p-4 border border-slate-200 text-xs text-slate-700 space-y-1">
+              <p className="font-bold flex items-center gap-1.5 text-slate-900">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                No Payment Taken
+              </p>
+              <p>
+                This booking hasn't been paid, so cancelling releases your reserved seats right away. Nothing will be charged.
+              </p>
+            </div>
+          ) : isEligibleForAutoRefund ? (
             <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200 text-xs text-emerald-800 space-y-1">
               <p className="font-bold flex items-center gap-1.5 text-emerald-900">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />

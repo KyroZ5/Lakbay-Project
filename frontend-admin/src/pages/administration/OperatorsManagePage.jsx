@@ -44,7 +44,8 @@ export const OperatorsManagePage = () => {
 
   // Reject Dialog
   const [appToReject, setAppToReject] = useState(null);
-  const [rejectReason, setRejectReason] = useState('DOT Accreditation or business permit could not be verified');
+  const DEFAULT_REJECT_REASON = 'DOT Accreditation or business permit could not be verified';
+  const [rejectReason, setRejectReason] = useState(DEFAULT_REJECT_REASON);
   const [isRejecting, setIsRejecting] = useState(false);
 
   // Approve Dialog
@@ -79,7 +80,7 @@ export const OperatorsManagePage = () => {
   }, []);
 
   const handleApproveConfirm = async () => {
-    if (!appToApprove) return;
+    if (!appToApprove || isApproving) return;
     try {
       setIsApproving(true);
       await adminApi.approveOperatorApplication(appToApprove.id);
@@ -94,10 +95,14 @@ export const OperatorsManagePage = () => {
   };
 
   const handleRejectConfirm = async () => {
-    if (!appToReject) return;
+    if (!appToReject || isRejecting) return;
+    if (!rejectReason.trim()) {
+      notify.error('Please provide a rejection reason for the applicant.');
+      return;
+    }
     try {
       setIsRejecting(true);
-      await adminApi.rejectOperatorApplication(appToReject.id, rejectReason);
+      await adminApi.rejectOperatorApplication(appToReject.id, rejectReason.trim());
       notify.success(`Application for ${appToReject.agencyName} rejected.`);
       setAppToReject(null);
       await fetchData();
@@ -109,6 +114,7 @@ export const OperatorsManagePage = () => {
   };
 
   const handleToggleOperatorStatus = async (operator) => {
+    if (togglingUid) return;
     try {
       setTogglingUid(operator.uid);
       const newStatus = operator.accountStatus === 'active' ? 'deactivated' : 'active';
@@ -484,7 +490,10 @@ export const OperatorsManagePage = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => setAppToReject(app)}
+                              onClick={() => {
+                                setRejectReason(DEFAULT_REJECT_REASON);
+                                setAppToReject(app);
+                              }}
                               aria-label={`Reject ${app.agencyName}`}
                               className="h-8 text-red-600 hover:bg-red-50 border-red-200 font-semibold text-xs gap-1"
                             >

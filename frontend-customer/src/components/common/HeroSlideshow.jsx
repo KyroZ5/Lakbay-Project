@@ -14,37 +14,37 @@ const DEFAULT_SLIDES = [
   },
   {
     src: '/images/beach.jpg',
-    alt: 'White sand beach at sunset',
+    alt: 'White Beach, Boracay — powdery sand and turquoise water',
     label: 'Boracay Island',
   },
   {
-    src: '/images/sunset.jpg',
-    alt: 'Sunset over the water',
-    label: 'Sunset Cruise',
+    src: '/images/chocolate-hills.jpg',
+    alt: 'The Chocolate Hills of Carmen, Bohol',
+    label: 'Chocolate Hills, Bohol',
   },
   {
     src: '/images/island.jpg',
-    alt: 'Tropical island getaway',
-    label: 'Island Hopping',
+    alt: 'Kayangan Lake viewpoint over limestone cliffs in Coron',
+    label: 'Coron, Palawan',
   },
   {
     src: '/images/water.jpg',
-    alt: 'Crystal clear waters',
-    label: 'Palawan',
+    alt: 'Cloud 9 boardwalk and surf break in Siargao',
+    label: 'Siargao Island',
   },
   {
     src: '/images/coast.jpg',
-    alt: 'Coastal scenery',
-    label: 'Coastal Tour',
+    alt: 'Rolling green hills above the sea in Batanes',
+    label: 'Batanes',
   },
   {
     src: '/images/mountain.jpg',
-    alt: 'Mountain terraces above the clouds',
+    alt: 'Banaue Rice Terraces carved into the Ifugao mountains',
     label: 'Banaue Rice Terraces',
   },
   {
     src: '/images/lake.jpg',
-    alt: 'Mirror-still volcanic lake',
+    alt: 'Lake Sebu at dusk, South Cotabato',
     label: 'Lake Sebu',
   },
 ];
@@ -103,26 +103,22 @@ export const HeroSlideshow = ({ slides = DEFAULT_SLIDES, intervalMs = 4000 }) =>
       {slides.length > 1 && !isReducedMotion && (
         <>
           <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              prev();
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            type="button"
+              onClick={() => prev()}
+            onPointerEnter={(e) => e.pointerType === 'mouse' && setIsHovered(true)}
+            onPointerLeave={(e) => e.pointerType === 'mouse' && setIsHovered(false)}
             aria-label={`Previous: ${slides[((index - 1) % slides.length + slides.length) % slides.length].label}`}
-            className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hidden md:flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              next();
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            type="button"
+              onClick={() => next()}
+            onPointerEnter={(e) => e.pointerType === 'mouse' && setIsHovered(true)}
+            onPointerLeave={(e) => e.pointerType === 'mouse' && setIsHovered(false)}
             aria-label={`Next: ${slides[((index + 1) % slides.length + slides.length) % slides.length].label}`}
-            className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hidden md:flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -135,10 +131,8 @@ export const HeroSlideshow = ({ slides = DEFAULT_SLIDES, intervalMs = 4000 }) =>
           {slides.map((_, i) => (
             <button
               key={i}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                goTo(i);
-              }}
+              type="button"
+              onClick={() => goTo(i)}
               aria-label={`Slide ${i + 1} of ${slides.length}`}
               aria-pressed={i === index}
               className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${

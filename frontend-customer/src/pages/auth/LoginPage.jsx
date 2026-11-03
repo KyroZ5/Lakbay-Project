@@ -6,6 +6,8 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent } from '../../components/ui/card';
 import { notify, getErrorMessage } from '../../lib/notify';
+import { AuthShell } from '../../components/common/AuthShell';
+import { getSafeRedirect, withRedirect } from '../../lib/redirect';
 import { Compass, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
 export const LoginPage = () => {
@@ -19,9 +21,8 @@ export const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Check for redirect query param
-  const queryParams = new URLSearchParams(location.search);
-  const redirectPath = queryParams.get('redirect') || '/dashboard';
+  // Same-origin redirect target (validated to block open redirects)
+  const redirectPath = getSafeRedirect(location.search);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,7 +33,7 @@ export const LoginPage = () => {
     try {
       await login(email, password);
       notify.success('Signed in. Welcome back!');
-      navigate(redirectPath);
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
@@ -48,19 +49,11 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <Link to="/" className="inline-flex items-center gap-2 mb-2">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-              <Compass className="h-6 w-6 stroke-[2.2]" />
-            </div>
-            <span className="text-2xl font-black text-slate-900 font-heading">
-              Lakbay<span className="text-emerald-600">.ph</span>
-            </span>
-          </Link>
+    <AuthShell>
+      <div className="w-full space-y-6">
+        <div className="text-center lg:text-left">
           <h2 className="text-2xl font-extrabold text-slate-900 font-heading">
-            Welcome back, Traveler
+            Welcome back, <span className="text-gradient">Traveler</span>
           </h2>
           <p className="mt-1 text-xs text-slate-500">
             Sign in to manage your tour bookings, co-travelers, and trip itineraries.
@@ -95,7 +88,7 @@ export const LoginPage = () => {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="login-password" className="text-xs font-semibold text-slate-700">Password</Label>
                   <Link
-                    to="/forgot-password"
+                    to={withRedirect('/forgot-password', redirectPath)}
                     className="text-xs font-semibold text-emerald-600 hover:underline"
                   >
                     Forgot password?
@@ -142,13 +135,13 @@ export const LoginPage = () => {
 
             <div className="mt-6 text-center text-xs text-slate-500">
               Don't have an account yet?{' '}
-              <Link to="/register" className="font-bold text-emerald-600 hover:underline">
+              <Link to={withRedirect('/register', redirectPath)} className="font-bold text-emerald-600 hover:underline">
                 Create Account
               </Link>
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AuthShell>
   );
 };

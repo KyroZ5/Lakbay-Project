@@ -18,27 +18,44 @@ export const ContactPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 py-16">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
-            Get in Touch
-          </Badge>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 font-heading">
-            We're Here to Help
-          </h1>
-          <p className="mt-3 text-slate-600 text-sm">
-            Have questions about tour package itineraries, departure schedules, or custom group bookings? Send us a message and our support team will respond within 24 hours.
-          </p>
+        {/* Header banner */}
+        <div className="relative mb-14 overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl shadow-slate-300/60">
+          <img src="/images/coast.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-30" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/85 to-slate-900/40" />
+          <div className="orb orb-teal -right-8 -top-10 h-48 w-48 opacity-50" />
+          <div className="relative px-6 py-12 sm:px-12 sm:py-14 text-center max-w-2xl mx-auto">
+            <Badge className="bg-emerald-500/25 text-emerald-300 border-emerald-500/30 font-semibold mb-3 px-3 py-1">
+              Get in Touch
+            </Badge>
+            <h1 className="text-4xl sm:text-5xl font-extrabold font-heading">
+              We're Here to <span className="text-gradient">Help</span>
+            </h1>
+            <p className="mt-3 text-slate-300 text-sm">
+              Have questions about tour package itineraries, departure schedules, or custom group bookings? Send us a message and our support team will respond within 24 hours.
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-wider">
+              {['Mon–Sat', '8AM–7PM PHT', '24h response'].map((t) => (
+                <span key={t} className="rounded-full border border-white/25 bg-white/10 px-3 py-1 backdrop-blur-sm">
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           {/* Contact Details */}
-          <div className="md:col-span-5 rounded-2xl bg-slate-900 text-white p-8 space-y-6">
-            <h3 className="text-xl font-bold font-heading">Contact Information</h3>
-            <p className="text-sm text-slate-400">
-              Our travel specialists are available Mondays to Saturdays, 8:00 AM – 7:00 PM (PHT).
-            </p>
+          <div className="relative md:col-span-5 overflow-hidden rounded-2xl bg-slate-900 text-white p-8 space-y-6">
+            <div className="orb orb-emerald -left-10 -top-10 h-36 w-36 opacity-40" />
+            <div className="orb orb-coral -right-8 bottom-10 h-32 w-32 opacity-30" style={{ animationDelay: '-4s' }} />
+            <div className="relative">
+              <h3 className="text-xl font-bold font-heading">Contact Information</h3>
+              <p className="text-sm text-slate-400">
+                Our travel specialists are available Mondays to Saturdays, 8:00 AM – 7:00 PM (PHT).
+              </p>
+            </div>
 
-            <div className="space-y-4 pt-4 text-sm">
+            <div className="relative space-y-4 pt-4 text-sm">
               <div className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
@@ -64,7 +81,7 @@ export const ContactPage = () => {
               </div>
             </div>
 
-            <div id="cancellation" className="pt-6 border-t border-slate-800">
+            <div id="cancellation" className="relative pt-6 border-t border-slate-800">
               <h4 className="font-bold text-sm text-emerald-400 mb-1">Standard Cancellation Notice</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Eligible early cancellations must be submitted through your customer dashboard on or before the package cutoff threshold (typically 7 days prior to departure) for automatic Stripe refund processing.
@@ -73,7 +90,7 @@ export const ContactPage = () => {
           </div>
 
           {/* Contact Form */}
-          <div className="md:col-span-7 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="md:col-span-7 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg shadow-slate-200/50">
             {submitted ? (
               <div role="status" className="text-center py-12">
                 <CheckCircle2 className="h-14 w-14 text-emerald-600 mx-auto mb-4" />

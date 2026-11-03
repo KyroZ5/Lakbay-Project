@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { packagesApi } from '../../api/packagesApi';
 import { bookingsApi } from '../../api/bookingsApi';
 import { customerApi } from '../../api/customerApi';
@@ -133,6 +133,9 @@ const ReviewsSkeleton = () => (
 export const PackageDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Stripe cancel_url returns here with ?booking_ref=…&status=cancelled
+  const cancelledRef = searchParams.get('status') === 'cancelled' ? searchParams.get('booking_ref') : null;
   const { user, profile } = useAuth();
 
   const [pkg, setPackage] = useState(null);
@@ -264,7 +267,7 @@ export const PackageDetailPage = () => {
 
   const images = pkg.imageUrls?.length > 0
     ? pkg.imageUrls
-    : ['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80'];
+    : ['/images/el-nido.jpg'];
 
   const originalUnitPrice = Number(pkg.pricePerPerson) || 0;
   const discountPercent = Number(pkg.discountPercent) || 0;
@@ -276,11 +279,29 @@ export const PackageDetailPage = () => {
   const originalTotalPrice = originalUnitPrice * numberOfTravelers;
   const totalSavings = originalTotalPrice - totalPrice;
 
+  // Seats the traveler count may not exceed (backend caps a booking at 50 travelers)
+  const maxTravelers = Math.max(1, Math.min(50, selectedDeparture?.remainingSlots ?? 10));
+  const maxCoTravelers = numberOfTravelers - 1;
+
+  // Change the traveler count and drop selected co-travelers that no longer fit
+  const changeTravelers = (next) => {
+    setNumberOfTravelers(next);
+    setSelectedCoTravelerIds((ids) => ids.slice(0, Math.max(0, next - 1)));
+  };
+
+  const handleSelectDeparture = (dep) => {
+    setSelectedDeparture(dep);
+    const cap = Math.max(1, Math.min(50, dep?.remainingSlots ?? 10));
+    if (numberOfTravelers > cap) changeTravelers(cap);
+  };
+
   const handleToggleCoTraveler = (ct) => {
     if (selectedCoTravelerIds.includes(ct.id)) {
       setSelectedCoTravelerIds(selectedCoTravelerIds.filter((cid) => cid !== ct.id));
-    } else {
+    } else if (selectedCoTravelerIds.length < maxCoTravelers) {
       setSelectedCoTravelerIds([...selectedCoTravelerIds, ct.id]);
+    } else {
+      notify.error(`Increase the number of travelers to add more companions (max ${maxCoTravelers}).`);
     }
   };
 
@@ -290,7 +311,7 @@ export const PackageDetailPage = () => {
     setBookingError('');
 
     if (!user) {
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
@@ -336,6 +357,7 @@ export const PackageDetailPage = () => {
     });
 
     setSubmittingBooking(true);
+    let redirecting = false;
 
     try {
       const bookingPayload = {
@@ -354,7 +376,8 @@ export const PackageDetailPage = () => {
 
       if (checkoutUrl) {
         notify.success('Booking created. Redirecting to secure Stripe checkout...');
-        // Redirect directly to Stripe Checkout
+        // Redirect directly to Stripe Checkout; keep the button disabled while the browser navigates
+        redirecting = true;
         window.location.href = checkoutUrl;
       } else {
         notify.success(
@@ -365,7 +388,7 @@ export const PackageDetailPage = () => {
     } catch (err) {
       notify.error(err, 'Failed to initialize Stripe checkout. Please try again.');
     } finally {
-      setSubmittingBooking(false);
+      if (!redirecting) setSubmittingBooking(false);
     }
   };
 
@@ -381,6 +404,23 @@ export const PackageDetailPage = () => {
           Back to Tour Packages
         </Link>
 
+        {cancelledRef && (
+          <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <p className="flex-1">
+              Checkout for booking {cancelledRef} was not completed — no payment was charged. The reserved seats are released automatically when the checkout session expires.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSearchParams({}, { replace: true })}
+              aria-label="Dismiss message"
+              className="rounded-full px-1 font-bold opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+        )}
+
         {/* Title Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -394,7 +434,7 @@ export const PackageDetailPage = () => {
               </Badge>
               <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full text-xs font-bold text-amber-800">
                 <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
-                <span>{reviewsData.averageRating > 0 ? reviewsData.averageRating.toFixed(1) : (pkg.averageRating ? pkg.averageRating.toFixed(1) : 'New')}</span>
+                <span>{Number(reviewsData.averageRating) > 0 ? Number(reviewsData.averageRating).toFixed(1) : (Number(pkg.averageRating) > 0 ? Number(pkg.averageRating).toFixed(1) : 'New')}</span>
                 <span className="text-slate-400 font-normal">
                   ({reviewsData.totalReviews || pkg.reviewCount || 0})
                 </span>
@@ -619,7 +659,7 @@ export const PackageDetailPage = () => {
                 departures={pkg.departures || []}
                 destinationCoordinates={pkg.destination?.coordinates}
                 selectedDepartureId={selectedDeparture?.id}
-                onSelectDeparture={(dep) => setSelectedDeparture(dep)}
+                onSelectDeparture={handleSelectDeparture}
               />
             </div>
 
@@ -642,7 +682,7 @@ export const PackageDetailPage = () => {
                   <div className="flex items-center gap-3 bg-amber-50/70 border border-amber-200/60 px-4 py-2.5 rounded-xl shrink-0">
                     <div className="text-center">
                       <div className="text-2xl font-black text-amber-700 font-heading leading-tight">
-                        {reviewsData.averageRating?.toFixed(1) || '0.0'}
+                        {(Number(reviewsData.averageRating) || 0).toFixed(1)}
                       </div>
                       <div className="flex items-center gap-0.5 mt-0.5">
                         {[1, 2, 3, 4, 5].map((s) => (
@@ -852,7 +892,7 @@ export const PackageDetailPage = () => {
                       Number of Travelers
                     </Label>
                     <span className="text-xs text-slate-500 font-medium">
-                      Max: {selectedDeparture?.remainingSlots || 10}
+                      Max: {maxTravelers}
                     </span>
                   </div>
                   <div className="flex items-center gap-3" role="group" aria-labelledby="travelers-count-label">
@@ -860,7 +900,7 @@ export const PackageDetailPage = () => {
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() => setNumberOfTravelers(Math.max(1, numberOfTravelers - 1))}
+                      onClick={() => changeTravelers(Math.max(1, numberOfTravelers - 1))}
                       aria-label="Decrease number of travelers"
                       className="bg-slate-50 font-bold text-slate-700 shadow-none"
                     >
@@ -874,8 +914,8 @@ export const PackageDetailPage = () => {
                       variant="outline"
                       size="icon"
                       onClick={() =>
-                        setNumberOfTravelers(
-                          Math.min(selectedDeparture?.remainingSlots || 10, numberOfTravelers + 1)
+                        changeTravelers(
+                          Math.min(maxTravelers, numberOfTravelers + 1)
                         )
                       }
                       aria-label="Increase number of travelers"
@@ -1023,7 +1063,7 @@ export const PackageDetailPage = () => {
                 {/* 6. Checkout CTA */}
                 <Button
                   type="submit"
-                  disabled={submittingBooking || !selectedDeparture || selectedDeparture.isDeadlinePassed || selectedDeparture.remainingSlots <= 0}
+                  disabled={submittingBooking || !selectedDeparture || selectedDeparture.status !== 'open' || selectedDeparture.isDeadlinePassed || selectedDeparture.remainingSlots <= 0}
                   className="w-full h-12 font-bold text-base rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none"
                 >
                   {submittingBooking ? (

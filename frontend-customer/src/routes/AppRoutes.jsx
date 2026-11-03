@@ -1,11 +1,13 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 
 // Layouts
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { ScrollToHash } from '../components/common/ScrollToHash';
+import { ScrollReveal } from '../components/common/ScrollReveal';
 
 // Public Pages
 import { HomePage } from '../pages/public/HomePage';
@@ -16,6 +18,7 @@ import { PackageDetailPage } from '../pages/public/PackageDetailPage';
 import { AboutPage } from '../pages/public/AboutPage';
 import { ContactPage } from '../pages/public/ContactPage';
 import { BecomeOperatorPage } from '../pages/public/BecomeOperatorPage';
+import { LegalPage } from '../pages/public/LegalPage';
 
 // Auth Pages
 import { LoginPage } from '../pages/auth/LoginPage';
@@ -33,6 +36,8 @@ import { NotificationsPage } from '../pages/customer/NotificationsPage';
 export const AppRoutes = () => {
   return (
     <div className="flex flex-col min-h-screen">
+      <ScrollToHash />
+      <ScrollReveal />
       <Navbar />
       <div className="flex-1">
         <Routes>
@@ -45,6 +50,7 @@ export const AppRoutes = () => {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/become-operator" element={<BecomeOperatorPage />} />
+          <Route path="/legal" element={<LegalPage />} />
 
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -75,9 +81,9 @@ export const AppRoutes = () => {
               <div className="py-24 text-center">
                 <h2 className="text-3xl font-black text-slate-800 font-heading">Page Not Found</h2>
                 <p className="text-slate-500 mt-2">The page you are looking for does not exist.</p>
-                <a href="/" className="mt-4 inline-block text-emerald-600 font-bold hover:underline">
+                <Link to="/" className="mt-4 inline-block text-emerald-600 font-bold hover:underline">
                   Return Home
-                </a>
+                </Link>
               </div>
             }
           />

@@ -113,8 +113,9 @@ export const PromotionsManagePage = () => {
       badgeText: promo.badgeText || 'SPECIAL OFFER',
       discountHighlight: promo.discountHighlight || '',
       actionUrl: promo.actionUrl || '/packages?discounted=true',
-      actionLabel: promo.actionLabel || 'Explore Deals',
-      imageUrl: promo.imageUrl || '',
+      // Backend persists actionText / bannerImageUrl; accept either naming
+      actionLabel: promo.actionLabel || promo.actionText || 'Explore Deals',
+      imageUrl: promo.imageUrl || promo.bannerImageUrl || '',
       isPublished: Boolean(promo.isPublished),
     });
     setIsModalOpen(true);
@@ -141,6 +142,9 @@ export const PromotionsManagePage = () => {
         imageUrl: formData.imageUrl.trim(),
         isPublished: formData.isPublished,
       };
+      // promotionController only stores actionText / bannerImageUrl — send the backend names too
+      payload.actionText = payload.actionLabel;
+      payload.bannerImageUrl = payload.imageUrl;
 
       if (editingPromo) {
         await adminApi.updatePromotion(editingPromo.id, payload);
@@ -160,13 +164,16 @@ export const PromotionsManagePage = () => {
   };
 
   const handleTogglePublish = async (promo) => {
+    if (togglingId) return;
     try {
       setTogglingId(promo.id);
-      await adminApi.togglePromotion(promo.id);
+      const res = await adminApi.togglePromotion(promo.id);
+      // Server flips its stored value; use the returned state rather than guessing
+      const nextPublished = typeof res?.data?.isPublished === 'boolean' ? res.data.isPublished : !promo.isPublished;
       setPromotions((prev) =>
-        prev.map((p) => (p.id === promo.id ? { ...p, isPublished: !p.isPublished } : p))
+        prev.map((p) => (p.id === promo.id ? { ...p, isPublished: nextPublished } : p))
       );
-      notify.success(promo.isPublished ? `"${promo.title}" moved to draft.` : `"${promo.title}" is now live.`);
+      notify.success(nextPublished ? `"${promo.title}" is now live.` : `"${promo.title}" moved to draft.`);
     } catch (err) {
       notify.error(err, 'Failed to update published status.');
     } finally {
@@ -175,7 +182,7 @@ export const PromotionsManagePage = () => {
   };
 
   const handleDelete = async () => {
-    if (!promoToDelete) return;
+    if (!promoToDelete || isDeleting) return;
     try {
       setIsDeleting(true);
       await adminApi.deletePromotion(promoToDelete.id);
@@ -297,9 +304,9 @@ export const PromotionsManagePage = () => {
               filtered.map((promo) => (
                 <TableRow key={promo.id}>
                   <TableCell>
-                    {promo.imageUrl ? (
+                    {promo.imageUrl || promo.bannerImageUrl ? (
                       <img
-                        src={promo.imageUrl}
+                        src={promo.imageUrl || promo.bannerImageUrl}
                         alt={promo.title}
                         className="h-12 w-20 rounded-md object-cover border border-slate-200 shadow-xs"
                       />
@@ -500,7 +507,7 @@ export const PromotionsManagePage = () => {
               <Label className="text-xs font-semibold">Campaign Banner Image</Label>
               <ImageUpload
                 folder="promotions"
-                images={formData.imageUrl ? [formData.imageUrl] : []}
+                value={formData.imageUrl ? [formData.imageUrl] : []}
                 onChange={(urls) => setFormData({ ...formData, imageUrl: urls[0] || '' })}
                 maxFiles={1}
               />

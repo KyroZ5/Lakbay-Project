@@ -128,7 +128,7 @@ export const DestinationDetailPage = () => {
 
   const images = destination.imageUrls?.length > 0
     ? destination.imageUrls
-    : ['https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80'];
+    : ['/images/el-nido.jpg'];
 
   return (
     <div className="min-h-screen bg-slate-50 py-10">
@@ -156,7 +156,9 @@ export const DestinationDetailPage = () => {
             </h1>
             <p className="mt-1 text-sm text-slate-600 flex items-center gap-1.5 font-medium">
               <MapPin className="h-4 w-4 text-emerald-600" />
-              {destination.location}, {destination.country || 'Philippines'}
+              {[destination.location, destination.country || 'Philippines']
+                .filter((part, i, parts) => part && !(i > 0 && parts[0]?.includes(part)))
+                .join(', ')}
             </p>
           </div>
 
@@ -255,7 +257,9 @@ export const DestinationDetailPage = () => {
                   Interactive Map & Coordinates
                 </h3>
                 <span className="text-xs font-semibold text-slate-400">
-                  {destination.coordinates?.lat?.toFixed(4)}, {destination.coordinates?.lng?.toFixed(4)}
+                  {Number.isFinite(Number(destination.coordinates?.lat)) && Number.isFinite(Number(destination.coordinates?.lng))
+                    ? `${Number(destination.coordinates.lat).toFixed(4)}, ${Number(destination.coordinates.lng).toFixed(4)}`
+                    : 'Coordinates unavailable'}
                 </span>
               </div>
               <DestinationMap
@@ -292,7 +296,7 @@ export const DestinationDetailPage = () => {
                 </div>
                 <div className="flex justify-between py-1.5">
                   <dt className="text-slate-500 font-medium">Related Tours</dt>
-                  <dd className="font-bold text-slate-900">{destination.relatedPackages?.length || 0} Tours Available</dd>
+                  <dd className="font-bold text-slate-900">{destination.relatedPackages?.length || 0} {destination.relatedPackages?.length === 1 ? 'Tour' : 'Tours'} Available</dd>
                 </div>
               </dl>
             </div>
@@ -310,7 +314,7 @@ export const DestinationDetailPage = () => {
                 <Card key={pkg.id} className="overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-lg transition-all">
                   <div className="h-48 overflow-hidden">
                     <img
-                      src={pkg.imageUrls?.[0] || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80'}
+                      src={pkg.imageUrls?.[0] || '/images/el-nido.jpg'}
                       alt={pkg.name}
                       className="h-full w-full object-cover"
                     />

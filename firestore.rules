@@ -101,8 +101,10 @@ service cloud.firestore {
     match /departures/{departureId} {
       allow read: if resource.data.status == 'open' || isStaff();
       allow create: if isCoordinator() || isAdmin();
-      // Tour guides can update departures assigned to them (check-in / complete)
-      allow update: if isCoordinator() || isAdmin() || (isGuide() && resource.data.assignedGuideId == request.auth.uid);
+      // Guide check-in / completion flows through /backend (guideController), so
+      // guides get no direct client write (previously they could rewrite any
+      // field, e.g. capacity/bookedCount, on assigned departures).
+      allow update: if isCoordinator() || isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -148,7 +150,8 @@ service cloud.firestore {
     // 9. Promotions Collection
     // ----------------------------------------------------
     match /promotions/{promotionId} {
-      allow read: if resource.data.isActive == true || isStaff();
+      // Field is `isPublished` (see promotionController); `isActive` never existed
+      allow read: if resource.data.isPublished == true || isStaff();
       allow create, update, delete: if isCoordinator() || isAdmin();
     }
 

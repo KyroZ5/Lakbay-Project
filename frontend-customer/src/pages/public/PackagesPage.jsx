@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { packagesApi } from '../../api/packagesApi';
 import { destinationsApi } from '../../api/destinationsApi';
@@ -12,6 +12,7 @@ import { EmptyState, ErrorState } from '../../components/common/DataStates';
 import { LoadingRegion } from '../../components/common/Skeletons';
 import { notify, getErrorMessage } from '../../lib/notify';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { todayInManila } from '../../lib/dates';
 import { Search, MapPin, Calendar, Clock, Star, Percent, Compass } from 'lucide-react';
 
 const PackageCardSkeleton = () => (
@@ -43,9 +44,13 @@ const PackageCardSkeleton = () => (
 );
 
 export const PackagesPage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
   const initialDiscounted = searchParams.get('discounted') === 'true';
+  const parseTravelers = (value) => {
+    const n = parseInt(value, 10);
+    return Number.isInteger(n) && n > 0 ? n : 0;
+  };
 
   const [packages, setPackages] = useState([]);
   const [destinations, setDestinations] = useState([]);
@@ -55,12 +60,22 @@ export const PackagesPage = () => {
   // Filter States
   const [search, setSearch] = useState(initialSearch);
   const [selectedDestination, setSelectedDestination] = useState('');
-  const [category, setCategory] = useState('');
-  const [departureDate, setDepartureDate] = useState('');
+  const [category, setCategory] = useState(searchParams.get('category') || '');
+  const [departureDate, setDepartureDate] = useState(searchParams.get('departureDate') || '');
+  const [travelers, setTravelers] = useState(parseTravelers(searchParams.get('travelers')));
   const [onlyDiscounted, setOnlyDiscounted] = useState(initialDiscounted);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [sort, setSort] = useState('featured');
+
+  // Re-sync filters when the URL changes while already on this page (e.g. footer category links)
+  useEffect(() => {
+    setSearch(searchParams.get('search') || '');
+    setCategory(searchParams.get('category') || '');
+    setDepartureDate(searchParams.get('departureDate') || '');
+    setTravelers(parseTravelers(searchParams.get('travelers')));
+    setOnlyDiscounted(searchParams.get('discounted') === 'true');
+  }, [searchParams]);
 
   useEffect(() => {
     // Load destination options for the filter dropdown
@@ -72,27 +87,36 @@ export const PackagesPage = () => {
       .catch((err) => notify.error(err, 'Failed to load destination filters.'));
   }, []);
 
-  const fetchPackages = async () => {
+  // Ignore responses from superseded requests (fast filter clicks can resolve out of order)
+  const requestIdRef = useRef(0);
+
+  // `overrides` lets Reset fetch with cleared values before state updates land
+  const fetchPackages = async (overrides = {}) => {
+    const f = { search, selectedDestination, category, departureDate, onlyDiscounted, minPrice, maxPrice, sort, ...overrides };
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError('');
     try {
       const params = {};
-      if (search) params.search = search;
-      if (selectedDestination) params.destinationId = selectedDestination;
-      if (category) params.category = category;
-      if (departureDate) params.departureDate = departureDate;
-      if (onlyDiscounted) params.discounted = 'true';
-      if (minPrice) params.minPrice = minPrice;
-      if (maxPrice) params.maxPrice = maxPrice;
-      if (sort) params.sort = sort;
+      if (f.search) params.search = f.search;
+      if (f.selectedDestination) params.destinationId = f.selectedDestination;
+      if (f.category) params.category = f.category;
+      // "From" date: any open departure on or after the chosen day
+      if (f.departureDate) params.departureDateFrom = f.departureDate;
+      if (f.onlyDiscounted) params.discounted = 'true';
+      if (f.minPrice) params.minPrice = f.minPrice;
+      if (f.maxPrice) params.maxPrice = f.maxPrice;
+      if (f.sort) params.sort = f.sort;
 
       const res = await packagesApi.getAll(params);
+      if (requestId !== requestIdRef.current) return;
       setPackages(res.data || []);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       console.error('Failed to load packages:', err);
       setError(getErrorMessage(err, 'Failed to load tour packages.'));
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   };
 
@@ -110,17 +134,40 @@ export const PackagesPage = () => {
     setSelectedDestination('');
     setCategory('');
     setDepartureDate('');
+    setTravelers(0);
     setOnlyDiscounted(false);
     setMinPrice('');
     setMaxPrice('');
     setSort('featured');
-    fetchPackages();
+    if (searchParams.toString()) setSearchParams({}, { replace: true });
+    fetchPackages({
+      search: '',
+      selectedDestination: '',
+      category: '',
+      departureDate: '',
+      onlyDiscounted: false,
+      minPrice: '',
+      maxPrice: '',
+      sort: 'featured',
+    });
   };
 
   const categories = ['All', 'Island Hopping', 'Adventure', 'Beach', 'Heritage', 'Nature'];
   const hasActiveFilters = Boolean(
-    search || selectedDestination || category || departureDate || onlyDiscounted || minPrice || maxPrice
+    search || selectedDestination || category || departureDate || travelers || onlyDiscounted || minPrice || maxPrice
   );
+  // Backend has no traveler-count filter: keep packages where a single bookable departure
+  // (on/after the chosen date) can seat the whole group
+  const visiblePackages = travelers
+    ? packages.filter((pkg) =>
+        (pkg.openDepartures || []).some(
+          (d) =>
+            d.remainingSlots >= travelers &&
+            !d.isDeadlinePassed &&
+            (!departureDate || (d.departureDate || '') >= departureDate)
+        )
+      )
+    : packages;
   // Skeleton only when there are no cards yet; refreshes keep the current cards visible
   const showSkeleton = loading && packages.length === 0;
   const chipFocus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1';
@@ -128,21 +175,33 @@ export const PackagesPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="max-w-3xl mb-10">
-          <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
-            Tour Catalog
-          </Badge>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 font-heading">
-            Philippine Tour Packages
-          </h1>
-          <p className="mt-3 text-slate-600 text-base">
-            Multi-day handcrafted itineraries with daily activity schedules, licensed guides, and transparent Philippine Peso pricing.
-          </p>
+        {/* Header banner */}
+        <div className="relative mb-10 overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white shadow-2xl shadow-emerald-200/50">
+          <img src="/images/island.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-50" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-emerald-900/75 to-transparent" />
+          <div className="orb orb-coral right-6 -top-8 h-40 w-40 opacity-40" />
+          <div className="relative px-6 py-12 sm:px-10 sm:py-14 max-w-3xl">
+            <Badge className="bg-white/15 text-emerald-200 border-white/25 font-semibold mb-3 px-3 py-1">
+              Tour Catalog
+            </Badge>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-heading">
+              Philippine <span className="text-gradient-warm">Tour Packages</span>
+            </h1>
+            <p className="mt-3 text-emerald-50/90 text-base max-w-2xl">
+              Multi-day handcrafted itineraries with daily activity schedules, licensed guides, and transparent Philippine Peso pricing.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-wider">
+              {['Island Hopping', 'Adventure', 'Heritage', 'Nature'].map((tag) => (
+                <span key={tag} className="rounded-full border border-white/25 bg-white/10 px-3 py-1 backdrop-blur-sm">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Filter Controls Toolbar */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-10">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50 mb-10">
           <form onSubmit={handleSearchSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* Keyword Search */}
@@ -185,7 +244,7 @@ export const PackagesPage = () => {
                   type="date"
                   value={departureDate}
                   onChange={(e) => setDepartureDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={todayInManila()}
                   className="pl-9 text-xs h-10"
                   aria-label="Departure date from"
                   title="Filter tours with available departures from this date"
@@ -262,6 +321,25 @@ export const PackagesPage = () => {
                     </button>
                   </span>
                 )}
+
+                {travelers > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold ml-1">
+                    {travelers} traveler{travelers > 1 ? 's' : ''}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTravelers(0);
+                        const next = new URLSearchParams(searchParams);
+                        next.delete('travelers');
+                        setSearchParams(next, { replace: true });
+                      }}
+                      aria-label="Clear traveler count filter"
+                      className={`ml-1 rounded-full text-emerald-600 hover:text-emerald-950 font-bold ${chipFocus}`}
+                    >
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </span>
+                )}
               </div>
 
               {/* Price Filter Inputs & Action */}
@@ -312,7 +390,7 @@ export const PackagesPage = () => {
               <PackageCardSkeleton key={i} />
             ))}
           </LoadingRegion>
-        ) : packages.length === 0 ? (
+        ) : visiblePackages.length === 0 ? (
           error ? null : (
             <div className="rounded-2xl border border-slate-200 bg-white">
               {hasActiveFilters ? (
@@ -341,18 +419,19 @@ export const PackagesPage = () => {
           )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" aria-busy={loading}>
-            {packages.map((pkg) => (
+            {visiblePackages.map((pkg) => (
               <Card
                 key={pkg.id}
-                className="group flex flex-col justify-between overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="group card-tilt flex flex-col justify-between overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm"
               >
                 <div>
                   <div className="relative h-60 overflow-hidden">
                     <img
-                      src={pkg.imageUrls?.[0] || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80'}
+                      src={pkg.imageUrls?.[0] || '/images/el-nido.jpg'}
                       alt={pkg.name}
-                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div className="absolute top-3 left-3">
                       <Badge className="bg-white/95 text-slate-900 font-bold text-xs backdrop-blur-sm shadow-sm flex items-center gap-1">
                         <Clock className="h-3 w-3 text-emerald-600" />
@@ -380,7 +459,7 @@ export const PackagesPage = () => {
                       {pkg.averageRating > 0 ? (
                         <div className="flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
                           <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
-                          <span>{pkg.averageRating.toFixed(1)}</span>
+                          <span>{Number(pkg.averageRating).toFixed(1)}</span>
                           <span className="text-slate-400 font-normal text-[10px]">({pkg.reviewCount || 0})</span>
                         </div>
                       ) : (
@@ -401,7 +480,7 @@ export const PackagesPage = () => {
                         {pkg.nextDepartureDate ? `Next: ${formatDate(pkg.nextDepartureDate)}` : 'Upcoming departures'}
                       </span>
                       <span className="font-bold text-emerald-700">
-                        {pkg.availableSlots || 15} slots left
+                        {pkg.availableSlots > 0 ? `${pkg.availableSlots} slots left` : 'Fully booked'}
                       </span>
                     </div>
                   </CardContent>

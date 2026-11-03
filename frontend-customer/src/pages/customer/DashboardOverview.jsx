@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/badge';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState, ErrorState } from '../../components/common/DataStates';
 import { LoadingRegion } from '../../components/common/Skeletons';
+import { todayInManila } from '../../lib/dates';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { getErrorMessage } from '../../lib/notify';
 import {
@@ -47,11 +48,11 @@ export const DashboardOverview = () => {
   const confirmedBookings = bookings.filter((b) => b.bookingStatus === 'Confirmed').length;
   const pendingBookings = bookings.filter((b) => b.bookingStatus === 'Pending').length;
 
-  const today = new Date().toISOString().split('T')[0];
-  const upcomingTrips = bookings.filter(
-    (b) => b.departureDate >= today && (b.bookingStatus === 'Confirmed' || b.bookingStatus === 'Pending')
-  );
-
+  const today = todayInManila();
+  const upcomingTrips = bookings
+    .filter((b) => b.departureDate >= today && (b.bookingStatus === 'Confirmed' || b.bookingStatus === 'Pending'))
+    // Soonest departure first (bookings arrive newest-booked first)
+    .sort((a, b) => String(a.departureDate).localeCompare(String(b.departureDate)));
   const nextUpcoming = upcomingTrips.length > 0 ? upcomingTrips[0] : null;
 
   // Skeleton only on initial load; refreshes keep the current content visible
@@ -62,20 +63,36 @@ export const DashboardOverview = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Greeting */}
-      <div>
-        <h1 className="text-3xl font-black text-slate-900 font-heading">
-          Mabuhay, {profile?.fullName?.split(' ')[0] || 'Traveler'}!
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Here is a summary of your upcoming departures and active travel itineraries.
-        </p>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-600 bg-[length:200%_auto] animate-gradient-x px-6 py-6 sm:px-8 text-white shadow-lg shadow-emerald-500/20">
+        <div className="pointer-events-none absolute inset-0 bg-dots-light opacity-20" />
+        <div className="pointer-events-none absolute -right-6 -top-10 h-40 w-40 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute right-24 -bottom-6 h-24 w-24 rounded-full bg-white/10" />
+        <div className="relative z-10 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-100/90 mb-1">
+              {new Date().toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <h1 className="text-3xl font-black font-heading">
+              Mabuhay, {profile?.fullName?.split(' ')[0] || 'Traveler'}! 👋
+            </h1>
+            <p className="mt-1 text-sm text-emerald-50/90">
+              Here is a summary of your upcoming departures and active travel itineraries.
+            </p>
+          </div>
+          <div className="hidden sm:flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30 backdrop-blur animate-bounce-soft">
+            <Plane className="h-8 w-8 text-white" />
+          </div>
+        </div>
       </div>
 
       {error && <ErrorState message={error} onRetry={fetchBookings} retrying={loading} />}
 
       {/* Next Upcoming Departure Banner */}
       {nextUpcoming && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-800 to-teal-900 p-6 sm:p-8 text-white shadow-lg">
+        <div className="relative overflow-hidden rounded-2xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-900/20">
+          <img src="/images/island.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-teal-900/85 to-emerald-800/60" />
+          <div className="orb orb-coral right-10 -top-8 h-32 w-32 opacity-40" />
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
               <Badge className="bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider">
@@ -155,49 +172,49 @@ export const DashboardOverview = () => {
         <>
           {/* Metrics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="rounded-2xl border-slate-200">
+            <Card className="rounded-2xl border-slate-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60 transition-all">
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Bookings</p>
                   <p className="text-3xl font-black text-slate-900 font-heading mt-1">{totalBookings}</p>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 text-white shadow-lg">
                   <Compass className="h-6 w-6" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-slate-200">
+            <Card className="rounded-2xl border-slate-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-200/60 transition-all">
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confirmed Trips</p>
                   <p className="text-3xl font-black text-emerald-700 font-heading mt-1">{confirmedBookings}</p>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30">
                   <CheckCircle2 className="h-6 w-6" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-slate-200">
+            <Card className="rounded-2xl border-slate-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-teal-200/60 transition-all">
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Upcoming Departures</p>
                   <p className="text-3xl font-black text-slate-900 font-heading mt-1">{upcomingTrips.length}</p>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-100 text-teal-800">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/30">
                   <Calendar className="h-6 w-6" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-slate-200">
+            <Card className="rounded-2xl border-slate-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-amber-200/60 transition-all">
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Confirmation</p>
                   <p className="text-3xl font-black text-amber-700 font-heading mt-1">{pendingBookings}</p>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30">
                   <Clock className="h-6 w-6" />
                 </div>
               </CardContent>

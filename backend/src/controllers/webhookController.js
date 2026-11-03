@@ -23,7 +23,10 @@ const isPlaceholderSecret = (secret) => !secret || secret.toLowerCase().includes
 export const handleStripeWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Fail closed: the unsigned dev fallback runs ONLY when NODE_ENV is explicitly 'development'
+  // (an unset/mistyped NODE_ENV in a deployment must not accept forged events).
+  // On Vercel (VERCEL=1) unsigned delivery is NEVER accepted, whatever NODE_ENV says.
+  const isProduction = process.env.NODE_ENV !== 'development' || process.env.VERCEL === '1';
   const canVerify = isStripeInitialized && Boolean(sig) && !isPlaceholderSecret(webhookSecret);
 
   let event;
@@ -56,148 +59,34 @@ export const handleStripeWebhook = async (req, res) => {
 
   try {
     switch (event.type) {
-      // 1. Payment successfully completed
+      // 1. Checkout finished. For card payments payment_status is 'paid'; for delayed
+      //    (async) methods it is 'unpaid' and the outcome arrives later via
+      //    checkout.session.async_payment_succeeded / _failed.
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const bookingId = session.client_reference_id || session.metadata?.bookingId;
-
-        if (!bookingId) {
-          console.warn('[Stripe Webhook] checkout.session.completed missing bookingId');
-          break;
+        if (session.payment_status === 'paid' || session.payment_status === 'no_payment_required') {
+          await confirmPaidSession(session, now);
+        } else {
+          console.log(`[Stripe Webhook] Session ${session.id} completed with payment_status=${session.payment_status}; awaiting async result.`);
         }
-
-        const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(bookingId);
-        const bookingDoc = await bookingRef.get();
-
-        if (!bookingDoc.exists) {
-          console.error(`[Stripe Webhook] Booking ${bookingId} not found`);
-          break;
-        }
-
-        const booking = bookingDoc.data();
-
-        // Idempotency: never re-confirm or overwrite an already-processed booking.
-        if (booking.paymentStatus === 'Paid' && booking.bookingStatus === 'Confirmed') {
-          console.log(`[Stripe Webhook] Duplicate event for booking ${bookingId} — already Confirmed/Paid, skipping.`);
-          break;
-        }
-
-        // Never resurrect a cancelled booking (seats were already released).
-        if (booking.bookingStatus === 'Cancelled') {
-          console.warn(`[Stripe Webhook] Ignoring payment event for Cancelled booking ${bookingId}.`);
-          break;
-        }
-
-        // Dedupe: if this Stripe session already produced a payment record, skip.
-        const existingPayment = await db
-          .collection(PAYMENTS_COLLECTION)
-          .where('stripeSessionId', '==', session.id)
-          .limit(1)
-          .get();
-        if (!existingPayment.empty) {
-          console.log(`[Stripe Webhook] Payment for session ${session.id} already recorded, skipping.`);
-          break;
-        }
-
-        const paymentIntentId = typeof session.payment_intent === 'string'
-          ? session.payment_intent
-          : session.payment_intent?.id || '';
-
-        const amountPaid = (session.amount_total || 0) / 100;
-
-        // Atomically mark booking Confirmed and Paid
-        await bookingRef.update({
-          bookingStatus: 'Confirmed',
-          paymentStatus: 'Paid',
-          stripePaymentIntentId: paymentIntentId,
-          stripeSessionId: session.id,
-          paidAt: now,
-          updatedAt: now,
-        });
-
-        // Create record in payments collection
-        await db.collection(PAYMENTS_COLLECTION).add({
-          bookingId,
-          bookingReference: booking.bookingReference,
-          customerId: booking.customerId,
-          amount: amountPaid || booking.totalPrice,
-          currency: (session.currency || 'php').toUpperCase(),
-          paymentMethod: 'stripe',
-          referenceNumber: paymentIntentId,
-          stripeSessionId: session.id,
-          stripeRefundId: null,
-          paymentStatus: 'Paid',
-          createdAt: now,
-          refundedAt: null,
-        });
-
-        // Create customer notification
-        await db.collection(NOTIFICATIONS_COLLECTION).add({
-          userId: booking.customerId,
-          title: 'Payment Confirmed! Your Tour is Booked',
-          message: `We received your payment of PHP ${Number(booking.totalPrice || 0).toLocaleString()} for booking ${
-            booking.bookingReference
-          }. Your departure is confirmed for ${booking.departureDate}.`,
-          type: 'booking_confirmed',
-          isRead: false,
-          relatedBookingId: bookingId,
-          createdAt: now,
-        });
-
-        await logActivity({
-          actorUid: booking.customerId,
-          actorRole: 'customer',
-          action: 'STRIPE_PAYMENT_CONFIRMED',
-          targetType: 'booking',
-          targetId: bookingId,
-          metadata: { amount: amountPaid, paymentIntentId },
-        });
-
-        console.log(`[Stripe Webhook] Booking ${bookingId} confirmed & payment recorded.`);
         break;
       }
 
-      // 2. Checkout session expired without payment: release reserved seats
-      case 'checkout.session.expired': {
-        const session = event.data.object;
-        const bookingId = session.client_reference_id || session.metadata?.bookingId;
+      case 'checkout.session.async_payment_succeeded': {
+        await confirmPaidSession(event.data.object, now);
+        break;
+      }
 
-        if (!bookingId) break;
-
-        const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(bookingId);
-        const bookingDoc = await bookingRef.get();
-
-        if (bookingDoc.exists) {
-          const booking = bookingDoc.data();
-
-          // Only release if still pending/unpaid
-          if (booking.bookingStatus === 'Pending' && booking.paymentStatus === 'Unpaid') {
-            const depRef = db.collection(DEPARTURES_COLLECTION).doc(booking.departureId);
-
-            await db.runTransaction(async (t) => {
-              const bDoc = await t.get(bookingRef);
-              // Re-check inside transaction to avoid double release on retry
-              if (!bDoc.exists || bDoc.data().bookingStatus !== 'Pending') return;
-
-              const dDoc = await t.get(depRef);
-              if (dDoc.exists) {
-                const booked = dDoc.data().bookedCount || 0;
-                t.update(depRef, {
-                  bookedCount: Math.max(0, booked - booking.numberOfTravelers),
-                  updatedAt: now,
-                });
-              }
-
-              t.update(bookingRef, {
-                bookingStatus: 'Cancelled',
-                cancellationReason: 'Checkout session expired without payment',
-                updatedAt: now,
-              });
-            });
-
-            console.log(`[Stripe Webhook] Released seats for expired checkout session ${session.id}`);
-          }
-        }
+      // 2. Session expired or async payment failed: release reserved seats
+      case 'checkout.session.expired':
+      case 'checkout.session.async_payment_failed': {
+        await releaseUnpaidSession(
+          event.data.object,
+          now,
+          event.type === 'checkout.session.expired'
+            ? 'Checkout session expired without payment'
+            : 'Payment failed'
+        );
         break;
       }
 
@@ -210,5 +99,189 @@ export const handleStripeWebhook = async (req, res) => {
     console.error('[Stripe Webhook] Error processing event:', error);
     // Return 500 so Stripe retries; avoid leaking internal error details.
     return res.status(500).json({ error: 'Webhook processing failed' });
+  }
+};
+
+const getBookingIdFromSession = (session) => session?.client_reference_id || session?.metadata?.bookingId;
+
+const getPaymentIntentId = (session) =>
+  typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || '';
+
+/**
+ * Mark a booking Confirmed/Paid for a paid Checkout session — atomically.
+ * The booking re-check and the payment record write happen in ONE transaction
+ * (payment doc id derived from the session id), so a concurrent cancellation can't
+ * be overwritten back to Confirmed and duplicate deliveries can't double-record.
+ */
+const confirmPaidSession = async (session, now) => {
+  const bookingId = getBookingIdFromSession(session);
+  if (!bookingId) {
+    console.warn('[Stripe Webhook] paid session missing bookingId');
+    return;
+  }
+
+  const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(bookingId);
+  const paymentIntentId = getPaymentIntentId(session);
+  const amountPaid = (session.amount_total || 0) / 100;
+
+  // Legacy dedupe: payment records created before deterministic ids were used
+  const existingPayment = await db
+    .collection(PAYMENTS_COLLECTION)
+    .where('stripeSessionId', '==', session.id)
+    .limit(1)
+    .get();
+  if (!existingPayment.empty) {
+    console.log(`[Stripe Webhook] Payment for session ${session.id} already recorded, skipping.`);
+    return;
+  }
+
+  const paymentRef = db.collection(PAYMENTS_COLLECTION).doc(`stripe_${session.id}`);
+
+  const outcome = await db.runTransaction(async (t) => {
+    const bDoc = await t.get(bookingRef);
+    const pDoc = await t.get(paymentRef);
+    if (!bDoc.exists) return { result: 'missing' };
+    const booking = bDoc.data();
+
+    if (pDoc.exists || (booking.paymentStatus === 'Paid' && booking.bookingStatus === 'Confirmed')) {
+      return { result: 'duplicate', booking };
+    }
+
+    // Never resurrect a cancelled/rejected booking (seats were already released).
+    if (['Cancelled', 'Rejected'].includes(booking.bookingStatus)) {
+      return { result: 'cancelled', booking };
+    }
+
+    t.update(bookingRef, {
+      bookingStatus: 'Confirmed',
+      paymentStatus: 'Paid',
+      stripePaymentIntentId: paymentIntentId,
+      stripeSessionId: session.id,
+      paidAt: now,
+      updatedAt: now,
+    });
+
+    t.set(paymentRef, {
+      bookingId,
+      bookingReference: booking.bookingReference,
+      customerId: booking.customerId,
+      amount: amountPaid || booking.totalPrice,
+      currency: (session.currency || 'php').toUpperCase(),
+      paymentMethod: 'stripe',
+      referenceNumber: paymentIntentId,
+      stripeSessionId: session.id,
+      stripeRefundId: null,
+      paymentStatus: 'Paid',
+      createdAt: now,
+      refundedAt: null,
+    });
+
+    return { result: 'confirmed', booking };
+  });
+
+  if (outcome.result === 'missing') {
+    console.error(`[Stripe Webhook] Booking ${bookingId} not found`);
+    return;
+  }
+  if (outcome.result === 'duplicate') {
+    console.log(`[Stripe Webhook] Duplicate event for booking ${bookingId} — already Confirmed/Paid, skipping.`);
+    return;
+  }
+
+  if (outcome.result === 'cancelled') {
+    // Money was captured for a booking that no longer holds seats: refund it rather than keep it.
+    if (paymentIntentId && isStripeInitialized && stripe) {
+      try {
+        const refund = await stripe.refunds.create(
+          { payment_intent: paymentIntentId, reason: 'requested_by_customer' },
+          { idempotencyKey: `late-payment-refund-${session.id}` }
+        );
+        await bookingRef.update({
+          latePaymentRefundId: refund.id,
+          latePaymentRefundStatus: refund.status,
+          updatedAt: now,
+        });
+        console.warn(`[Stripe Webhook] Refunded late payment ${paymentIntentId} for ${outcome.booking.bookingStatus} booking ${bookingId}.`);
+      } catch (refundErr) {
+        // Refund honesty: record the failure for support instead of pretending it succeeded
+        await bookingRef.update({ latePaymentRefundStatus: 'failed', updatedAt: now });
+        console.error(`[Stripe Webhook] Late-payment refund FAILED for booking ${bookingId}:`, refundErr.message);
+      }
+    } else {
+      await bookingRef.update({ latePaymentRefundStatus: 'failed', updatedAt: now });
+      console.error(`[Stripe Webhook] Late payment on ${outcome.booking.bookingStatus} booking ${bookingId} could not be refunded automatically.`);
+    }
+    await logActivity({
+      actorUid: 'system',
+      actorRole: 'system',
+      action: 'LATE_PAYMENT_ON_CANCELLED_BOOKING',
+      targetType: 'booking',
+      targetId: bookingId,
+      metadata: { stripeSessionId: session.id, paymentIntentId },
+    });
+    return;
+  }
+
+  const booking = outcome.booking;
+
+  // Create customer notification
+  await db.collection(NOTIFICATIONS_COLLECTION).add({
+    userId: booking.customerId,
+    title: 'Payment Confirmed! Your Tour is Booked',
+    message: `We received your payment of PHP ${Number(booking.totalPrice || 0).toLocaleString()} for booking ${
+      booking.bookingReference
+    }. Your departure is confirmed for ${booking.departureDate}.`,
+    type: 'booking_confirmed',
+    isRead: false,
+    relatedBookingId: bookingId,
+    createdAt: now,
+  });
+
+  await logActivity({
+    actorUid: booking.customerId,
+    actorRole: 'customer',
+    action: 'STRIPE_PAYMENT_CONFIRMED',
+    targetType: 'booking',
+    targetId: bookingId,
+    metadata: { amount: amountPaid, paymentIntentId },
+  });
+
+  console.log(`[Stripe Webhook] Booking ${bookingId} confirmed & payment recorded.`);
+};
+
+/** Release the seats of a still-Pending/Unpaid booking whose session expired or whose payment failed. */
+const releaseUnpaidSession = async (session, now, reason) => {
+  const bookingId = getBookingIdFromSession(session);
+  if (!bookingId) return;
+
+  const bookingRef = db.collection(BOOKINGS_COLLECTION).doc(bookingId);
+
+  const released = await db.runTransaction(async (t) => {
+    const bDoc = await t.get(bookingRef);
+    // Check inside the transaction to avoid double release on retry / race with payment
+    if (!bDoc.exists) return false;
+    const booking = bDoc.data();
+    if (booking.bookingStatus !== 'Pending' || booking.paymentStatus !== 'Unpaid') return false;
+
+    const depRef = db.collection(DEPARTURES_COLLECTION).doc(booking.departureId);
+    const dDoc = await t.get(depRef);
+    if (dDoc.exists) {
+      const booked = dDoc.data().bookedCount || 0;
+      t.update(depRef, {
+        bookedCount: Math.max(0, booked - (booking.numberOfTravelers || 0)),
+        updatedAt: now,
+      });
+    }
+
+    t.update(bookingRef, {
+      bookingStatus: 'Cancelled',
+      cancellationReason: reason,
+      updatedAt: now,
+    });
+    return true;
+  });
+
+  if (released) {
+    console.log(`[Stripe Webhook] Released seats for session ${session.id} (${reason})`);
   }
 };

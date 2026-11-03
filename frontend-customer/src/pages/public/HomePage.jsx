@@ -33,6 +33,20 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+// Promotion action links are free-text from staff: allow absolute http(s) URLs or
+// in-app paths only; anything else falls back to the discounted-packages list.
+const DEFAULT_PROMO_PATH = '/packages?discounted=true';
+
+// Pick a column count that fills complete rows (avoids a lone card on the last row)
+const cardGridCols = (count) =>
+  count % 4 === 0 ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
+const resolvePromoLink = (url) => {
+  const value = (url || '').trim();
+  if (/^https?:\/\//i.test(value)) return { external: true, href: value };
+  if (value.startsWith('/') && !value.startsWith('//')) return { external: false, href: value };
+  return { external: false, href: DEFAULT_PROMO_PATH };
+};
+
 export const HomePage = () => {
   const navigate = useNavigate();
 
@@ -64,25 +78,33 @@ export const HomePage = () => {
   const [error, setError] = useState('');
 
   // Debounced Geoapify destination autocomplete
+  const pickedQueryRef = useRef(null);
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
       setAutocompleteResults([]);
       return;
     }
+    // Text was just filled from a picked suggestion — don't reopen the dropdown
+    if (searchQuery === pickedQueryRef.current) return;
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setIsSearchingAutocomplete(true);
       try {
         const res = await externalApi.autocompleteLocation(searchQuery);
-        setAutocompleteResults(res.data || []);
+        // Drop responses for text the user has since changed
+        if (!cancelled) setAutocompleteResults(res.data || []);
       } catch (err) {
         console.warn('Autocomplete fetch error:', err);
       } finally {
-        setIsSearchingAutocomplete(false);
+        if (!cancelled) setIsSearchingAutocomplete(false);
       }
     }, 250);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [searchQuery]);
 
   // Load featured destinations, popular packages, and promotional campaigns
@@ -110,24 +132,7 @@ export const HomePage = () => {
     loadHomeData();
   }, [loadHomeData]);
 
-  // Scroll reveal for sections and staggered grid items
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    const targets = document.querySelectorAll(
-      '.reveal-up, .reveal-stagger > *'
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading]);
+  // Scroll reveal is handled app-wide by <ScrollReveal /> in AppRoutes
 
   // Skeletons only on the initial load; retries keep any content already shown
   const showDestinationSkeleton = loading && featuredDestinations.length === 0;
@@ -144,7 +149,9 @@ export const HomePage = () => {
   };
 
   const handleSelectAutocomplete = (item) => {
-    setSearchQuery(item.name || item.formatted);
+    const picked = item.name || item.formatted;
+    pickedQueryRef.current = picked;
+    setSearchQuery(picked);
     setAutocompleteResults([]);
   };
 
@@ -183,6 +190,32 @@ export const HomePage = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/40" />
 
+        {/* Floating destination postcards */}
+        <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block" aria-hidden="true">
+          <div className="absolute left-[6%] top-[22%] w-36 rotate-[-8deg] overflow-hidden rounded-xl border border-white/30 shadow-2xl shadow-black/40 animate-float">
+            <img src="/images/el-nido.jpg" alt="" className="h-24 w-full object-cover" loading="lazy" />
+            <div className="bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800 text-center">El Nido</div>
+          </div>
+          <div className="absolute right-[7%] top-[18%] w-32 rotate-[7deg] overflow-hidden rounded-xl border border-white/30 shadow-2xl shadow-black/40 animate-float" style={{ animationDelay: '-2s' }}>
+            <img src="/images/beach.jpg" alt="" className="h-20 w-full object-cover" loading="lazy" />
+            <div className="bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800 text-center">Boracay</div>
+          </div>
+          <div className="absolute left-[10%] bottom-[16%] w-28 rotate-[6deg] overflow-hidden rounded-xl border border-white/30 shadow-2xl shadow-black/40 animate-float" style={{ animationDelay: '-4s' }}>
+            <img src="/images/chocolate-hills.jpg" alt="" className="h-16 w-full object-cover" loading="lazy" />
+            <div className="bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800 text-center">Bohol</div>
+          </div>
+          <div className="absolute right-[9%] bottom-[20%] w-36 rotate-[-6deg] overflow-hidden rounded-xl border border-white/30 shadow-2xl shadow-black/40 animate-float" style={{ animationDelay: '-6s' }}>
+            <img src="/images/mountain.jpg" alt="" className="h-20 w-full object-cover" loading="lazy" />
+            <div className="bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800 text-center">Banaue</div>
+          </div>
+          <div className="absolute left-[4%] top-[52%] rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-emerald-200 backdrop-blur-md border border-white/20 animate-bounce-soft">
+            🌴 7,641 islands
+          </div>
+          <div className="absolute right-[4%] top-[46%] rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-amber-200 backdrop-blur-md border border-white/20 animate-bounce-soft" style={{ animationDelay: '-1.2s' }}>
+            ⭐ 4.9 traveler rating
+          </div>
+        </div>
+
         <div className="relative z-10 container mx-auto max-w-5xl text-center">
           <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider mb-6">
             <Sparkles className="h-3.5 w-3.5 mr-1.5 inline text-emerald-400" />
@@ -214,6 +247,9 @@ export const HomePage = () => {
                     autoComplete="off"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Escape' && setAutocompleteResults([])}
+                    // Delay so a click on a suggestion registers before the list closes
+                    onBlur={() => setTimeout(() => setAutocompleteResults([]), 150)}
                     placeholder="Where to? (e.g. El Nido, Coron, Siargao)"
                     aria-busy={isSearchingAutocomplete}
                     className="h-11 rounded-xl bg-slate-50/50 pl-10 pr-4 py-2.5 font-medium focus-visible:bg-white"
@@ -312,7 +348,33 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* PROMOTIONAL CAMPAIGN BANNER / RIBBON */}
+      {/* TRUST STATS BAND */}
+      <section className="relative overflow-hidden bg-white border-b border-slate-100">
+        <div className="pointer-events-none absolute inset-0 bg-dots opacity-60" />
+        <div className="orb orb-emerald -left-16 top-0 h-40 w-40 opacity-40" />
+        <div className="orb orb-coral -right-10 bottom-0 h-40 w-40 opacity-30" style={{ animationDelay: '-5s' }} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 reveal-stagger">
+            {[
+              { value: '12K+', label: 'Happy Travelers', icon: Users, color: 'from-emerald-500 to-teal-500' },
+              { value: '120+', label: 'Curated Destinations', icon: MapPin, color: 'from-sky-500 to-blue-500' },
+              { value: '350+', label: 'Tour Packages', icon: Compass, color: 'from-amber-500 to-orange-500' },
+              { value: '4.9', label: 'Average Rating', icon: Star, color: 'from-rose-500 to-pink-500' },
+            ].map((stat, i) => (
+              <div key={i} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white/80 backdrop-blur px-4 py-5 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${stat.color} text-white shadow-lg`}>
+                  <stat.icon className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900 font-heading count-animate">{stat.value}</div>
+                  <div className="text-xs font-semibold text-slate-500">{stat.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {showPromoSkeleton && (
         <section
           className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 py-6 border-y border-emerald-700/60 shadow-md"
@@ -365,10 +427,20 @@ export const HomePage = () => {
 
               <div className="flex items-center gap-3 shrink-0">
                 <Button asChild className="bg-amber-400 hover:bg-amber-300 active:bg-amber-300 text-slate-950 font-extrabold text-sm px-6 shadow-md">
-                  <Link to={promotions[0].actionUrl || '/packages?discounted=true'}>
-                    {promotions[0].actionLabel || 'Explore Discounted Tours'}
-                    <ArrowRight className="ml-1.5 h-4 w-4" />
-                  </Link>
+                  {(() => {
+                    const promoLink = resolvePromoLink(promotions[0].actionUrl);
+                    const content = (
+                      <>
+                        {promotions[0].actionText || promotions[0].actionLabel || 'Explore Discounted Tours'}
+                        <ArrowRight className="ml-1.5 h-4 w-4" />
+                      </>
+                    );
+                    return promoLink.external ? (
+                      <a href={promoLink.href} target="_blank" rel="noopener noreferrer">{content}</a>
+                    ) : (
+                      <Link to={promoLink.href}>{content}</Link>
+                    );
+                  })()}
                 </Button>
               </div>
             </div>
@@ -440,17 +512,18 @@ export const HomePage = () => {
             />
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 reveal-stagger">
+          <div className={`grid grid-cols-1 ${cardGridCols(featuredDestinations.length)} gap-6 reveal-stagger`}>
             {featuredDestinations.map((dest) => (
               <Card
                 key={dest.id}
                 className="group overflow-hidden rounded-2xl border-slate-200/80 shadow-sm hover:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.35)] transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02]"
               >
                 <div className="relative h-64 overflow-hidden">
-                  <motion.div
-                    whileHover={{ scale: 1.05, rotate: 1 }}
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    style={{ backgroundImage: `url(${dest.imageUrls?.[0] || 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=800&q=80'})` }}
+                  <div
+                    role="img"
+                    aria-label={dest.name}
+                    className="h-full w-full bg-cover bg-center bg-no-repeat group-hover:scale-105 transition-transform duration-700"
+                    style={{ backgroundImage: `url(${dest.imageUrls?.[0] || '/images/el-nido.jpg'})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -550,17 +623,18 @@ export const HomePage = () => {
             />
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 reveal-stagger">
+          <div className={`grid grid-cols-1 ${cardGridCols(popularPackages.length)} gap-6 reveal-stagger`}>
             {popularPackages.map((pkg) => (
               <Card
                 key={pkg.id}
                 className="group flex flex-col overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.35)] transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02]"
               >
                 <div className="relative h-56 overflow-hidden">
-                  <motion.div
-                    whileHover={{ scale: 1.05, rotate: 1 }}
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    style={{ backgroundImage: `url(${pkg.imageUrls?.[0] || 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80'})` }}
+                  <div
+                    role="img"
+                    aria-label={pkg.name}
+                    className="h-full w-full bg-cover bg-center bg-no-repeat group-hover:scale-105 transition-transform duration-700"
+                    style={{ backgroundImage: `url(${pkg.imageUrls?.[0] || '/images/el-nido.jpg'})` }}
                   />
                   <div className="absolute top-3 left-3">
                     <Badge className="bg-white/90 text-slate-900 font-bold backdrop-blur-sm shadow-sm text-xs">
@@ -589,7 +663,7 @@ export const HomePage = () => {
                       {pkg.averageRating > 0 ? (
                         <div className="flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
                           <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
-                          <span>{pkg.averageRating.toFixed(1)}</span>
+                          <span>{Number(pkg.averageRating).toFixed(1)}</span>
                           <span className="text-slate-400 font-normal text-[10px]">({pkg.reviewCount || 0})</span>
                         </div>
                       ) : (
@@ -604,12 +678,12 @@ export const HomePage = () => {
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between">
+                  <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col gap-3">
                     <div>
                       <span className="block text-[11px] text-slate-400 font-medium">Starting from</span>
                       {pkg.discountPercent > 0 ? (
                         <div>
-                          <div className="flex items-baseline gap-1.5">
+                          <div className="flex items-baseline gap-1.5 whitespace-nowrap">
                             <span className="text-xl font-black text-emerald-700 font-heading">
                               {formatCurrency(pkg.effectivePrice || pkg.discountPrice)}
                             </span>
@@ -625,16 +699,16 @@ export const HomePage = () => {
                           </div>
                         </div>
                       ) : (
-                        <div>
+                        <div className="flex items-baseline gap-1 whitespace-nowrap">
                           <span className="text-xl font-black text-slate-900 font-heading">
                             {formatCurrency(pkg.pricePerPerson)}
                           </span>
-                          <span className="text-[10px] text-slate-500 ml-1">/ person</span>
+                          <span className="text-[10px] text-slate-500">/ person</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <Button asChild size="sm" variant="outline" className="font-semibold text-xs">
                         <Link to={`/packages/${pkg.id}`} aria-label={`View details for ${pkg.name}`}>
                           Details
@@ -675,33 +749,39 @@ export const HomePage = () => {
                 icon: Compass,
                 title: 'Easy Online Booking',
                 desc: 'Select departure dates and reserve slots online with instant seat locking.',
+                color: 'from-emerald-500 to-teal-500',
               },
               {
                 icon: MapPin,
                 title: 'Handcrafted Itineraries',
                 desc: 'Every daily activity is carefully planned with local guides and verified coordinates.',
+                color: 'from-sky-500 to-blue-500',
               },
               {
                 icon: CreditCard,
                 title: 'Transparent PHP Pricing',
                 desc: 'Zero hidden booking fees. What you see is what you pay in Philippine Pesos.',
+                color: 'from-amber-500 to-orange-500',
               },
               {
                 icon: ShieldCheck,
                 title: 'Automatic Refund Policy',
                 desc: 'Cancel before the package cutoff threshold and receive an automated Stripe refund.',
+                color: 'from-violet-500 to-purple-500',
               },
               {
                 icon: Headphones,
                 title: 'Dedicated Local Support',
                 desc: 'Support agents and licensed tour guides keep you covered from booking to return.',
+                color: 'from-rose-500 to-pink-500',
               },
             ].map((feature, i) => (
               <div
                 key={i}
-                className="flex flex-col items-center text-center p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/20 transition-colors"
+                className="group flex flex-col items-center text-center p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-200 hover:bg-white transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-emerald-500/10"
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 mb-4 shadow-sm">
+                <div className={`relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.color} text-white mb-4 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
+                  <span className="absolute inset-0 rounded-2xl ring-1 ring-white/30" />
                   <feature.icon className="h-7 w-7" />
                 </div>
                 <h4 className="font-bold text-slate-900 text-base mb-2 font-heading">{feature.title}</h4>
@@ -713,8 +793,11 @@ export const HomePage = () => {
       </section>
 
       {/* 6. HOW IT WORKS */}
-      <section className="py-20 bg-slate-900 text-white reveal-up">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 bg-slate-900 text-white overflow-hidden reveal-up">
+        <div className="pointer-events-none absolute inset-0 bg-dots-light opacity-10" />
+        <div className="orb orb-emerald -left-20 top-10 h-64 w-64 opacity-40" />
+        <div className="orb orb-teal right-0 bottom-0 h-56 w-56 opacity-30" style={{ animationDelay: '-7s' }} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <Badge className="bg-emerald-500/20 text-emerald-300 border-none font-semibold mb-2">
               Simple 5-Step Process
@@ -727,16 +810,21 @@ export const HomePage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 reveal-stagger">
+          <div className="relative grid grid-cols-1 md:grid-cols-5 gap-6 reveal-stagger">
+            {/* Connecting dashed line (desktop) */}
+            <div className="hidden md:block absolute left-0 right-0 top-1 -z-0 border-t-2 border-dashed border-emerald-500/30" aria-hidden="true" />
             {[
-              { step: '01', title: 'Explore Destinations', desc: 'Browse our curated destination guides with live weather & Leaflet maps.' },
-              { step: '02', title: 'Choose a Tour', desc: 'Select multi-day tour packages with day-by-day activity itineraries.' },
-              { step: '03', title: 'Pick Departure', desc: 'Choose an open schedule on our interactive OpenWeather departure calendar.' },
-              { step: '04', title: 'Book & Pay in PHP', desc: 'Pay securely via Stripe Checkout with card or mobile payment options.' },
-              { step: '05', title: 'Travel & Check In', desc: 'Receive instant booking reference, itinerary vouchers, and guide support.' },
+              { step: '01', title: 'Explore Destinations', desc: 'Browse our curated destination guides with live weather & Leaflet maps.', emoji: '🗺️' },
+              { step: '02', title: 'Choose a Tour', desc: 'Select multi-day tour packages with day-by-day activity itineraries.', emoji: '🏝️' },
+              { step: '03', title: 'Pick Departure', desc: 'Choose an open schedule on our interactive OpenWeather departure calendar.', emoji: '📅' },
+              { step: '04', title: 'Book & Pay in PHP', desc: 'Pay securely via Stripe Checkout with card or mobile payment options.', emoji: '💳' },
+              { step: '05', title: 'Travel & Check In', desc: 'Receive instant booking reference, itinerary vouchers, and guide support.', emoji: '🛫' },
             ].map((s, i) => (
-              <div key={i} className="relative flex flex-col p-6 rounded-2xl bg-slate-800/80 border border-slate-700/60">
-                <span className="text-3xl font-black text-emerald-400 font-heading mb-3">{s.step}</span>
+              <div key={i} className="group relative flex flex-col items-center text-center p-6 rounded-2xl bg-slate-800/80 border border-slate-700/60 hover:border-emerald-500/50 hover:bg-slate-800 transition-all duration-300 hover:-translate-y-1.5">
+                <div className="relative z-10 -mt-12 mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xl shadow-lg shadow-emerald-500/40 ring-4 ring-slate-900 group-hover:scale-110 transition-transform">
+                  {s.emoji}
+                </div>
+                <span className="text-xs font-black text-emerald-400 tracking-widest mb-2">STEP {s.step}</span>
                 <h4 className="text-base font-bold text-white mb-2 font-heading">{s.title}</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">{s.desc}</p>
               </div>
@@ -745,8 +833,98 @@ export const HomePage = () => {
         </div>
       </section>
 
+      {/* 6.5 TRAVELER TESTIMONIALS */}
+      <section className="relative py-20 bg-gradient-to-b from-white via-emerald-50/40 to-white overflow-hidden reveal-up">
+        <div className="orb orb-coral -right-16 top-10 h-56 w-56 opacity-30" />
+        <div className="orb orb-sky -left-14 bottom-0 h-52 w-52 opacity-30" style={{ animationDelay: '-4s' }} />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <Badge className="bg-amber-100 text-amber-800 border-none font-semibold mb-2">
+              <Star className="h-3 w-3 mr-1 fill-amber-500 text-amber-500" />
+              Traveler Stories
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading">
+              Loved by Adventurers
+            </h2>
+            <p className="mt-2 text-slate-600 text-sm">
+              Sample reviews illustrating the island-hopping, diving, and trekking trips you can book on Lakbay.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 reveal-stagger">
+            {[
+              {
+                name: 'Maria Santos',
+                trip: 'El Nido Island Hopping — 4D/3N',
+                initials: 'MS',
+                gradient: 'from-emerald-500 to-teal-500',
+                quote: 'Everything from the Stripe booking to the guide check-in was seamless. The big lagoon at sunrise was worth every peso — zero hidden fees, exactly as promised.',
+              },
+              {
+                name: 'Jake Rivera',
+                trip: 'Siargao Surf & Island — 5D/4N',
+                initials: 'JR',
+                gradient: 'from-sky-500 to-blue-500',
+                quote: 'Rescheduling was painless and the refund hit my card in two days. The day-by-day itinerary on the site matched the actual trip perfectly. Will book again!',
+              },
+              {
+                name: 'Aisha Dela Cruz',
+                trip: 'Coron Shipwrecks & Lakes — 3D/2N',
+                initials: 'AD',
+                gradient: 'from-amber-500 to-orange-500',
+                quote: 'The departure calendar with live weather made picking dates so easy. Our DOT-accredited guide was fantastic and the Kayangan Lake viewpoint was a highlight for the kids.',
+              },
+            ].map((t, i) => (
+              <figure
+                key={i}
+                className="card-tilt relative rounded-2xl border border-white bg-white/90 backdrop-blur p-6 shadow-lg shadow-slate-200/60"
+              >
+                <div className="absolute -top-3 left-6 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white text-sm font-black shadow-lg">
+                  ★
+                </div>
+                <div className="flex gap-0.5 mb-3 text-amber-400" aria-label="5 out of 5 stars">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <blockquote className="text-sm text-slate-600 leading-relaxed">
+                  “{t.quote}”
+                </blockquote>
+                <figcaption className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br ${t.gradient} text-white text-sm font-black shadow-md ring-2 ring-white`}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">{t.name}</div>
+                    <div className="text-[11px] font-semibold text-emerald-700">{t.trip}</div>
+                  </div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+
+          {/* Photo strip */}
+          <div className="mt-12 grid grid-cols-4 gap-3 reveal-stagger">
+            {[
+              { src: '/images/island.jpg', caption: 'Coron, Palawan' },
+              { src: '/images/water.jpg', caption: 'Siargao' },
+              { src: '/images/coast.jpg', caption: 'Batanes' },
+              { src: '/images/lake.jpg', caption: 'Lake Sebu' },
+            ].map((img) => (
+              <div key={img.caption} className="img-zoom group relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                <img src={img.src} alt={img.caption} className="h-full w-full object-cover" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent" />
+                <span className="absolute bottom-2 left-3 text-[11px] font-bold uppercase tracking-wider text-white drop-shadow">
+                  {img.caption}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* 7. FREQUENTLY ASKED QUESTIONS */}
-      <section className="py-20 bg-slate-50 reveal-up">
+      <section id="faqs" className="scroll-mt-20 py-20 bg-slate-50 reveal-up">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
           <div className="text-center mb-14">
             <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
@@ -764,7 +942,11 @@ export const HomePage = () => {
             {faqs.map((faq, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all"
+                className={`rounded-xl border bg-white p-5 shadow-sm transition-all ${
+                  openFaq === i
+                    ? 'border-emerald-300 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-200/60'
+                    : 'border-slate-200 hover:border-emerald-200 hover:shadow-md'
+                }`}
               >
                 <button
                   type="button"
@@ -789,6 +971,42 @@ export const HomePage = () => {
             ))}
           </div>
         </div>
+        </section>
+
+        {/* FINAL CTA BANNER */}
+        <section className="relative overflow-hidden">
+          <img
+            src="/images/coast.jpg"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-emerald-800/85 to-teal-900/75" />
+          <div className="orb orb-coral right-10 top-4 h-40 w-40 opacity-40" />
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative py-16 text-center text-white">
+            <Badge className="bg-white/15 text-emerald-200 border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider mb-5">
+              <Sparkles className="h-3.5 w-3.5 mr-1.5 inline" />
+              Your island is waiting
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-extrabold font-heading max-w-2xl mx-auto">
+              Ready for your next <span className="text-gradient-warm">adventure</span>?
+            </h2>
+            <p className="mt-3 text-emerald-50/90 max-w-xl mx-auto text-sm sm:text-base">
+              Join thousands of travelers who booked transparent, guide-led Philippine tours with instant Stripe confirmation.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
+              <Button asChild size="lg" className="font-bold px-8 rounded-xl bg-white text-emerald-800 hover:bg-emerald-50 shadow-xl shadow-black/20">
+                <Link to="/packages">
+                  Start Exploring
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/15 hover:text-white font-bold px-8 rounded-xl bg-white/10 backdrop-blur">
+                <Link to="/become-operator">Become an Operator</Link>
+              </Button>
+            </div>
+          </div>
         </section>
 
         {/* Back to top button */}

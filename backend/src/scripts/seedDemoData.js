@@ -13,7 +13,7 @@ const DEMO_DESTINATIONS = [
     recommendedActivities: ['Island Hopping Tour A', 'Kayaking in Big Lagoon', 'Sunset at Las Cabañas', 'Scuba Diving'],
     imageUrls: [
       'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Big_Lagoon_at_El_Nido,_Palawan,_Philippines.jpg?width=1200',
     ],
     isPublished: true,
     isFeatured: true,
@@ -28,8 +28,8 @@ const DEMO_DESTINATIONS = [
     description: 'World-famous for crystal-clear Kayangan Lake, Twin Lagoon, and historic WWII Japanese shipwrecks enveloped in marine life.',
     recommendedActivities: ['Kayangan Lake Trek', 'Twin Lagoon Swimming', 'Shipwreck Snorkeling', 'Maquinit Hot Spring'],
     imageUrls: [
-      'https://images.unsplash.com/photo-1570789210967-2cac24afeb00?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Kayangan_Lake,_Coron_Island.jpg?width=1200',
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Kayangan_Lake,_Coron,_Palawan.jpg?width=1200',
     ],
     isPublished: true,
     isFeatured: true,
@@ -44,8 +44,8 @@ const DEMO_DESTINATIONS = [
     description: 'The surfing capital of the Philippines with rolling ocean swells at Cloud 9, tranquil tidal rock pools, and lush palm-fringed rivers.',
     recommendedActivities: ['Cloud 9 Surfing', 'Magpupungko Rock Pools', 'Sugba Lagoon Paddleboarding', 'Coconut Tree River Rope Swing'],
     imageUrls: [
-      'https://images.unsplash.com/photo-1534008897995-27a23e859048?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+      'https://commons.wikimedia.org/wiki/Special:FilePath/The_calm_sea_of_cloud_9_siargao_island_philippines.jpg?width=1200',
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Cloud_9_Siargao_Island_Sunset.jpg?width=1200',
     ],
     isPublished: true,
     isFeatured: true,
@@ -60,7 +60,7 @@ const DEMO_DESTINATIONS = [
     description: 'The northernmost frontier featuring rolling emerald hills, traditional Ivatan stone houses, lighthouses overlooking crashing Pacific waves.',
     recommendedActivities: ['Marlboro Hills Trek', 'Basco Lighthouse Sunset', 'Ivatan Stone House Tour', 'Sabtang Island Boat Crossing'],
     imageUrls: [
-      'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Vayang_Rolling_Hills,_Batanes,_Philippines.jpg?width=1200',
     ],
     isPublished: true,
     isFeatured: true,
@@ -75,7 +75,7 @@ const DEMO_DESTINATIONS = [
     description: 'Home of the geological wonder Chocolate Hills, the endangered Philippine Tarsier sanctuary, and the scenic Loboc River cruise.',
     recommendedActivities: ['Chocolate Hills Viewpoint', 'Tarsier Sanctuary Visit', 'Loboc River Buffet Cruise', 'Balicasag Dolphin Watching'],
     imageUrls: [
-      'https://images.unsplash.com/photo-1512100356356-de1b84283e18?auto=format&fit=crop&w=1200&q=80',
+      'https://commons.wikimedia.org/wiki/Special:FilePath/Chocolate_Hills_-_edit.jpg?width=1200',
     ],
     isPublished: true,
     isFeatured: false,
@@ -148,7 +148,7 @@ async function seedDemoData() {
         transportDetails: 'Air-conditioned tourist van and motorized outrigger banca boat.',
         imageUrls: [
           'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80',
-          'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+          'https://commons.wikimedia.org/wiki/Special:FilePath/Big_Lagoon_at_El_Nido,_Palawan,_Philippines.jpg?width=1200',
         ],
         itinerary: [
           {
@@ -255,7 +255,7 @@ async function seedDemoData() {
         accommodationDetails: 'Modern boutique hotel in Coron Town proper.',
         transportDetails: 'Private boat and air-conditioned shuttle transfers.',
         imageUrls: [
-          'https://images.unsplash.com/photo-1570789210967-2cac24afeb00?auto=format&fit=crop&w=1200&q=80',
+          'https://commons.wikimedia.org/wiki/Special:FilePath/Kayangan_Lake,_Coron_Island.jpg?width=1200',
         ],
         itinerary: [
           {
@@ -335,7 +335,7 @@ async function seedDemoData() {
         accommodationDetails: 'Eco-bungalow within walking distance of General Luna nightlife and beach.',
         transportDetails: 'Motorcycle rental option or private open-air safari van.',
         imageUrls: [
-          'https://images.unsplash.com/photo-1534008897995-27a23e859048?auto=format&fit=crop&w=1200&q=80',
+          'https://commons.wikimedia.org/wiki/Special:FilePath/The_calm_sea_of_cloud_9_siargao_island_philippines.jpg?width=1200',
         ],
         itinerary: [
           {
@@ -375,7 +375,7 @@ async function seedDemoData() {
         accommodationDetails: 'Charming heritage lodge with hot water and traditional breakfast.',
         transportDetails: 'Air-conditioned van and traditional faluwa boat to Sabtang.',
         imageUrls: [
-          'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+          'https://commons.wikimedia.org/wiki/Special:FilePath/Vayang_Rolling_Hills,_Batanes,_Philippines.jpg?width=1200',
         ],
         itinerary: [
           {

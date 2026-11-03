@@ -31,7 +31,15 @@ export const verifyToken = async (req, res, next) => {
     let fullName = decodedToken.name || '';
 
     if (db) {
-      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+      let userDoc;
+      try {
+        userDoc = await db.collection('users').doc(decodedToken.uid).get();
+      } catch (dbError) {
+        // The TOKEN is valid — a database outage (quota exhausted, network) must not look like an
+        // auth failure, or clients treat it as session expiry and sign the user out.
+        console.error('[Auth] User profile lookup failed:', dbError.code || dbError.message);
+        return sendError(res, 'Service temporarily unavailable. Please try again shortly.', 503);
+      }
       if (userDoc.exists) {
         const userData = userDoc.data();
         role = userData.role || role;
