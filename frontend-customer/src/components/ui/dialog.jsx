@@ -36,7 +36,7 @@ const DialogContent = React.forwardRef(({ className, children, ...props }, ref) 
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-3 top-3 sm:right-4 sm:top-4 rounded-md p-1.5 opacity-70 transition-opacity hover:opacity-100 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:pointer-events-none">
         <X className="h-5 w-5 text-slate-500" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -50,7 +50,7 @@ const DialogHeader = ({
   ...props
 }) => (
   <div
-    className={cn("flex flex-col space-y-1.5 text-center sm:text-left mb-4 sm:pr-8", className)}
+    className={cn("flex flex-col space-y-1.5 text-center sm:text-left mb-4 px-6 sm:px-0 sm:pr-8", className)}
     {...props}
   />
 )
@@ -62,7 +62,7 @@ const DialogFooter = ({
 }) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6 gap-2",
+      "flex flex-col-reverse sm:flex-row sm:justify-end mt-6 gap-2",
       className
     )}
     {...props}

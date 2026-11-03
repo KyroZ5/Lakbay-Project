@@ -72,7 +72,7 @@ export const RegisterPage = () => {
     <AuthShell>
       <div className="w-full space-y-6">
         <div className="text-center lg:text-left">
-          <h2 className="text-2xl font-extrabold text-slate-900 font-heading">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading break-words">
             Create Your <span className="text-gradient">Traveler Account</span>
           </h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -81,11 +81,11 @@ export const RegisterPage = () => {
         </div>
 
         <Card className="rounded-2xl border-slate-200 shadow-md">
-          <CardContent className="p-8">
+          <CardContent className="p-5 sm:p-8">
             {error && (
               <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-xl bg-red-50 p-3.5 text-xs text-red-700 border border-red-200">
                 <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
-                <span>{error}</span>
+                <span className="min-w-0 break-words">{error}</span>
               </div>
             )}
 
@@ -152,7 +152,7 @@ export const RegisterPage = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? 'Hide passwords' : 'Show passwords'}
                     aria-pressed={showPassword}
-                    className="absolute right-3 top-2.5 rounded text-slate-400 hover:text-slate-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded text-slate-400 hover:text-slate-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

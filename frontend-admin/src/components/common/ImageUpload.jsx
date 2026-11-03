@@ -180,7 +180,7 @@ export const ImageUpload = ({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
           <ImageIcon className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
           <span>{label}</span>
@@ -212,7 +212,7 @@ export const ImageUpload = ({
             aria-describedby={errorMessage ? errorId : undefined}
             value={manualUrl}
             onChange={(e) => setManualUrl(e.target.value)}
-            className="h-8 text-xs bg-white"
+            className="h-8 min-w-0 text-xs bg-white"
           />
           <Button
             type="button"
@@ -233,7 +233,7 @@ export const ImageUpload = ({
           className="rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-700 flex items-start gap-2"
         >
           <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" aria-hidden="true" />
-          <span>{errorMessage}</span>
+          <span className="min-w-0 break-words">{errorMessage}</span>
         </div>
       )}
 
@@ -278,7 +278,7 @@ export const ImageUpload = ({
               <div className="text-xs font-semibold text-slate-700">
                 Uploading to Firebase Storage ({uploadProgress}%)...
               </div>
-              <div className="w-48 mx-auto h-1.5 rounded-full bg-slate-200 overflow-hidden">
+              <div className="w-48 max-w-full mx-auto h-1.5 rounded-full bg-slate-200 overflow-hidden">
                 <div
                   className="h-full bg-emerald-600 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
@@ -338,7 +338,7 @@ export const ImageUpload = ({
                       handleRemoveImage(idx);
                     }}
                     aria-label={`Remove photo ${idx + 1}`}
-                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-slate-900/70 text-white hover:bg-red-600 hover:text-white shadow-xs"
+                    className="absolute top-1.5 right-1.5 h-8 w-8 sm:h-6 sm:w-6 rounded-full bg-slate-900/70 text-white hover:bg-red-600 hover:text-white shadow-xs"
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -355,7 +355,7 @@ export const ImageUpload = ({
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Open photo ${idx + 1} in a new tab`}
-                    className="absolute bottom-1.5 right-1.5 h-5 w-5 rounded bg-slate-900/60 text-white hover:bg-slate-900 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-opacity"
+                    className="absolute bottom-1.5 right-1.5 h-7 w-7 sm:h-5 sm:w-5 rounded bg-slate-900/60 text-white hover:bg-slate-900 flex items-center justify-center text-[10px] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-opacity"
                   >
                     <ExternalLink className="h-3 w-3" />
                   </a>

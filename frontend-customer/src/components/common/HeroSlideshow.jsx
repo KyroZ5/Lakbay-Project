@@ -108,7 +108,7 @@ export const HeroSlideshow = ({ slides = DEFAULT_SLIDES, intervalMs = 4000 }) =>
             onPointerEnter={(e) => e.pointerType === 'mouse' && setIsHovered(true)}
             onPointerLeave={(e) => e.pointerType === 'mouse' && setIsHovered(false)}
             aria-label={`Previous: ${slides[((index - 1) % slides.length + slides.length) % slides.length].label}`}
-            className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hidden md:flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hidden md:flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -118,7 +118,7 @@ export const HeroSlideshow = ({ slides = DEFAULT_SLIDES, intervalMs = 4000 }) =>
             onPointerEnter={(e) => e.pointerType === 'mouse' && setIsHovered(true)}
             onPointerLeave={(e) => e.pointerType === 'mouse' && setIsHovered(false)}
             aria-label={`Next: ${slides[((index + 1) % slides.length + slides.length) % slides.length].label}`}
-            className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hidden md:flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hidden md:flex items-center justify-center hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -127,7 +127,7 @@ export const HeroSlideshow = ({ slides = DEFAULT_SLIDES, intervalMs = 4000 }) =>
 
       {/* Dot navigation */}
       {slides.length > 1 && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+        <div className="absolute bottom-5 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
           {slides.map((_, i) => (
             <button
               key={i}
@@ -135,7 +135,7 @@ export const HeroSlideshow = ({ slides = DEFAULT_SLIDES, intervalMs = 4000 }) =>
               onClick={() => goTo(i)}
               aria-label={`Slide ${i + 1} of ${slides.length}`}
               aria-pressed={i === index}
-              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+              className={`relative w-2.5 h-2.5 rounded-full transition-all duration-300 before:absolute before:-inset-2 before:content-[''] ${
                 i === index
                   ? 'bg-emerald-400 ring-2 ring-white'
                   : 'bg-white/40 hover:bg-white/60'

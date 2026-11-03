@@ -32,7 +32,7 @@ import {
 
 /** Placeholder mirroring the detail layout: breadcrumb + status badges, then the summary card sections. */
 const BookingDetailSkeleton = () => (
-  <LoadingRegion label="Loading booking details" className="space-y-8 max-w-5xl">
+  <LoadingRegion label="Loading booking details" className="space-y-6 sm:space-y-8 max-w-5xl min-w-0">
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4" aria-hidden="true">
       <Skeleton className="h-4 w-32" />
       <div className="flex items-center gap-2">
@@ -41,23 +41,23 @@ const BookingDetailSkeleton = () => (
       </div>
     </div>
 
-    <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm" aria-hidden="true">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-7 shadow-sm" aria-hidden="true">
       {/* Reference / package / total */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
         <div className="space-y-2">
           <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-8 w-full max-w-56" />
           <Skeleton className="h-6 w-72 max-w-full" />
         </div>
         <div className="space-y-2 md:flex md:flex-col md:items-end">
           <Skeleton className="h-3 w-24" />
           <Skeleton className="h-9 w-40" />
-          <Skeleton className="h-3 w-52" />
+          <Skeleton className="h-3 w-full max-w-52" />
         </div>
       </div>
 
       {/* Departure details grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 py-6 border-b border-slate-100">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 py-6 border-b border-slate-100">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="space-y-2">
             <Skeleton className="h-3 w-24" />
@@ -78,7 +78,7 @@ const BookingDetailSkeleton = () => (
             </div>
             <div className="space-y-2">
               <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-4 w-full max-w-56" />
             </div>
           </div>
         </div>
@@ -86,7 +86,7 @@ const BookingDetailSkeleton = () => (
 
       {/* Manifest */}
       <div className="py-6 border-b border-slate-100">
-        <Skeleton className="h-5 w-60 mb-3" />
+        <Skeleton className="h-5 w-full max-w-60 mb-3" />
         <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
@@ -96,9 +96,9 @@ const BookingDetailSkeleton = () => (
       {/* Actions */}
       <div className="pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Skeleton className="h-3 w-72 max-w-full" />
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-10 w-40" />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Skeleton className="h-10 w-full sm:w-40" />
+          <Skeleton className="h-10 w-full sm:w-40" />
         </div>
       </div>
     </div>
@@ -205,7 +205,7 @@ export const BookingDetailPage = () => {
   if (!booking) {
     const notFound = !loadError || loadError.status === 404;
     return (
-      <div className="space-y-6 max-w-5xl">
+      <div className="space-y-6 max-w-5xl min-w-0">
         <Link
           to="/dashboard/bookings"
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-emerald-700 transition-colors"
@@ -344,7 +344,7 @@ export const BookingDetailPage = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl" aria-busy={loading}>
+    <div className="space-y-6 sm:space-y-8 max-w-5xl min-w-0" aria-busy={loading}>
       {/* Top Breadcrumb & Status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Link
@@ -355,7 +355,7 @@ export const BookingDetailPage = () => {
           Back to Bookings
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge
             className={`text-xs px-3 py-1 font-bold ${
               booking.bookingStatus === 'Confirmed'
@@ -395,11 +395,11 @@ export const BookingDetailPage = () => {
       {booking.rescheduleRequest?.status === 'pending' && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 min-w-0">
               <div className="rounded-xl bg-amber-100 p-2 text-amber-700 shrink-0">
                 <Clock className="h-5 w-5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h4 className="font-bold text-slate-900 text-sm">
                   Departure Reschedule Requested (Pending Operations Review)
                 </h4>
@@ -416,14 +416,14 @@ export const BookingDetailPage = () => {
               size="sm"
               onClick={() => setWithdrawConfirmOpen(true)}
               disabled={cancellingReschedule}
-              className="border-amber-300 text-amber-900 hover:bg-amber-100 text-xs shrink-0 font-medium"
+              className="w-full sm:w-auto h-10 sm:h-9 border-amber-300 text-amber-900 hover:bg-amber-100 text-xs shrink-0 font-medium"
             >
               {cancellingReschedule ? 'Withdrawing...' : 'Withdraw Request'}
             </Button>
           </div>
 
           {booking.rescheduleRequest.reason && (
-            <div className="rounded-xl bg-white/80 border border-amber-200/60 p-3 text-xs text-slate-700">
+            <div className="rounded-xl bg-white/80 border border-amber-200/60 p-3 text-xs text-slate-700 break-words">
               <span className="font-semibold text-slate-900">Your Justification: </span>
               <span>"{booking.rescheduleRequest.reason}"</span>
             </div>
@@ -438,7 +438,7 @@ export const BookingDetailPage = () => {
       {booking.rescheduleRequest?.status === 'rejected' && (
         <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 shadow-sm flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-slate-700 space-y-1">
+          <div className="text-xs text-slate-700 space-y-1 min-w-0 break-words">
             <p className="font-bold text-red-900">
               Departure Reschedule Request Declined
             </p>
@@ -458,7 +458,7 @@ export const BookingDetailPage = () => {
       {booking.rescheduleRequest?.status === 'approved' && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm flex items-start gap-3">
           <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-slate-700">
+          <div className="text-xs text-slate-700 min-w-0 break-words">
             <p className="font-bold text-emerald-900">
               Rescheduled Departure Confirmed
             </p>
@@ -470,25 +470,25 @@ export const BookingDetailPage = () => {
       )}
 
       {/* Main Booking Summary Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
-          <div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 lg:p-7 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-100">
+          <div className="min-w-0">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
               Booking Reference
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 font-mono mt-0.5">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 font-mono mt-0.5 break-all">
               {booking.bookingReference}
             </h2>
-            <h3 className="text-xl font-bold text-emerald-800 font-heading mt-1">
+            <h3 className="text-lg sm:text-xl font-bold text-emerald-800 font-heading mt-1 break-words">
               {booking.packageName}
             </h3>
           </div>
 
-          <div className="text-left md:text-right">
+          <div className="text-left md:text-right md:shrink-0">
             <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block">
               Total Amount
             </span>
-            <span className="text-3xl font-black text-slate-900 font-heading">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 font-heading break-words">
               {formatCurrency(booking.totalPrice)}
             </span>
             <span className="text-xs text-slate-500 block mt-0.5">
@@ -498,7 +498,7 @@ export const BookingDetailPage = () => {
         </div>
 
         {/* Departure Details Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 py-6 border-b border-slate-100 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 py-6 border-b border-slate-100 text-sm">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
               Departure Date
@@ -542,8 +542,8 @@ export const BookingDetailPage = () => {
         {/* Departure Logistics & Meeting Point (Ticket Instructions) */}
         <div className="py-6 border-b border-slate-100">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
-            <h4 className="font-bold text-slate-900 text-sm font-heading mb-2.5 flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-emerald-600" />
+            <h4 className="font-bold text-slate-900 text-sm font-heading mb-2.5 flex items-start sm:items-center gap-2">
+              <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
               Departure Meeting Point & Assembly Instructions
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -559,13 +559,13 @@ export const BookingDetailPage = () => {
                   Please arrive 15 minutes prior to departure for guide briefing and manifest check.
                 </span>
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-slate-500 font-semibold uppercase tracking-wider text-[11px] block">
                   Physical Meeting Landmark
                 </span>
                 <p className="font-bold text-slate-800 flex items-start gap-1.5 mt-0.5">
                   <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>{booking.meetingPoint || 'Designated Harbor / Tour Terminal'}</span>
+                  <span className="min-w-0 break-words">{booking.meetingPoint || 'Designated Harbor / Tour Terminal'}</span>
                 </p>
                 {booking.meetingPoint && (
                   <a
@@ -590,12 +590,12 @@ export const BookingDetailPage = () => {
           </h4>
 
           <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs py-1">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-x-4 text-xs py-1">
+              <div className="min-w-0 break-words">
                 <span className="font-bold text-slate-900">{booking.customerName}</span>
                 <span className="text-slate-500 ml-2">(Lead Traveler / Contact)</span>
               </div>
-              <div className="text-slate-600 mt-1 sm:mt-0 font-medium">
+              <div className="text-slate-600 mt-1 sm:mt-0 font-medium min-w-0 break-all sm:text-right">
                 {booking.customerEmail} • {booking.customerPhone}
               </div>
             </div>
@@ -606,16 +606,16 @@ export const BookingDetailPage = () => {
                   Companion Travelers
                 </span>
                 {booking.travelerManifest.slice(1).map((t, i) => (
-                  <div key={i} className="flex justify-between text-xs text-slate-700">
-                    <span className="font-semibold">{t.fullName}</span>
-                    <span className="text-slate-500">{t.relationship || 'Companion'}</span>
+                  <div key={i} className="flex justify-between gap-3 text-xs text-slate-700">
+                    <span className="font-semibold min-w-0 break-words">{t.fullName}</span>
+                    <span className="text-slate-500 shrink-0 text-right">{t.relationship || 'Companion'}</span>
                   </div>
                 ))}
               </div>
             )}
 
             {booking.specialRequests && (
-              <div className="pt-2 border-t border-slate-200/60 text-xs text-slate-600">
+              <div className="pt-2 border-t border-slate-200/60 text-xs text-slate-600 break-words">
                 <span className="font-bold text-slate-800">Special Requests: </span>
                 <span>{booking.specialRequests}</span>
               </div>
@@ -633,7 +633,7 @@ export const BookingDetailPage = () => {
 
             {existingReview ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
@@ -655,7 +655,7 @@ export const BookingDetailPage = () => {
                   </Badge>
                 </div>
                 {existingReview.comment && (
-                  <p className="text-xs text-slate-700 italic">"{existingReview.comment}"</p>
+                  <p className="text-xs text-slate-700 italic break-words">"{existingReview.comment}"</p>
                 )}
                 <span className="text-[11px] text-slate-400 block pt-1">
                   Submitted on {formatDate(existingReview.createdAt)}
@@ -663,7 +663,7 @@ export const BookingDetailPage = () => {
               </div>
             ) : (
               <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0 break-words">
                   <p className="text-xs font-bold text-slate-900">How was your travel experience?</p>
                   <p className="text-xs text-slate-500">
                     Share your feedback to help fellow travelers explore {booking.packageName}.
@@ -674,7 +674,7 @@ export const BookingDetailPage = () => {
                     setReviewFormErrors({});
                     setReviewModalOpen(true);
                   }}
-                  className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shrink-0 flex items-center gap-1.5 shadow-sm"
+                  className="w-full sm:w-auto h-10 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shrink-0 flex items-center gap-1.5 shadow-sm"
                 >
                   <Star className="h-3.5 w-3.5 fill-white" />
                   Leave a Review
@@ -702,11 +702,11 @@ export const BookingDetailPage = () => {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:shrink-0">
             {canCancel && booking.rescheduleRequest?.status !== 'pending' && (
               <Button
                 onClick={handleOpenRescheduleModal}
-                className="text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                className="w-full sm:w-auto h-10 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
               >
                 <Calendar className="h-3.5 w-3.5" />
                 Request Reschedule
@@ -717,7 +717,7 @@ export const BookingDetailPage = () => {
               <Button
                 variant="outline"
                 onClick={() => setCancelModalOpen(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs font-semibold"
+                className="w-full sm:w-auto h-10 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs font-semibold"
               >
                 Cancel This Booking
               </Button>
@@ -731,8 +731,8 @@ export const BookingDetailPage = () => {
         open={cancelModalOpen}
         onOpenChange={setCancelModalOpen}
         title={
-          <span className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="h-5 w-5" />
+          <span className="flex items-start sm:items-center gap-2 text-red-600 break-words">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
             Cancel Booking ({booking.bookingReference})
           </span>
         }
@@ -819,8 +819,8 @@ export const BookingDetailPage = () => {
         <DialogContent>
           <form onSubmit={handleReviewSubmit}>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-slate-900">
-                <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+              <DialogTitle className="flex items-start sm:items-center gap-2 pr-8 sm:pr-0 text-left text-slate-900 leading-snug break-words">
+                <Star className="h-5 w-5 shrink-0 text-amber-500 fill-amber-500" />
                 Rate & Review {booking.packageName}
               </DialogTitle>
               <DialogDescription>
@@ -835,7 +835,7 @@ export const BookingDetailPage = () => {
                   Your Overall Rating <span className="text-red-600" aria-hidden="true">*</span>
                 </span>
                 <div
-                  className="flex items-center gap-2"
+                  className="flex flex-wrap items-center gap-1 sm:gap-2"
                   role="group"
                   aria-labelledby="review-rating-label"
                   aria-describedby={reviewFormErrors.rating ? 'review-rating-error' : undefined}
@@ -924,8 +924,8 @@ export const BookingDetailPage = () => {
         <DialogContent>
           <form onSubmit={handleConfirmReschedule} noValidate>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-slate-900">
-                <Calendar className="h-5 w-5 text-emerald-600" />
+              <DialogTitle className="flex items-start sm:items-center gap-2 pr-8 sm:pr-0 text-left text-slate-900 leading-snug">
+                <Calendar className="h-5 w-5 shrink-0 text-emerald-600" />
                 Request Tour Departure Reschedule
               </DialogTitle>
               <DialogDescription>
@@ -967,10 +967,10 @@ export const BookingDetailPage = () => {
                       <div
                         key={i}
                         aria-hidden="true"
-                        className="rounded-xl p-3 border border-slate-200 flex items-center justify-between"
+                        className="rounded-xl p-3 border border-slate-200 flex items-center justify-between gap-3"
                       >
-                        <div className="space-y-2">
-                          <Skeleton className="h-3.5 w-48" />
+                        <div className="space-y-2 flex-1 min-w-0">
+                          <Skeleton className="h-3.5 w-full max-w-48" />
                           <Skeleton className="h-3 w-40" />
                         </div>
                         <Skeleton className="h-4 w-20 rounded" />
@@ -1004,23 +1004,23 @@ export const BookingDetailPage = () => {
                           type="button"
                           onClick={() => setSelectedTargetDepartureId(dep.id)}
                           aria-pressed={isSelected}
-                          className={`w-full text-left rounded-xl p-3 border cursor-pointer transition-all flex items-center justify-between text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          className={`w-full text-left rounded-xl p-3 border cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                             isSelected
                               ? 'border-emerald-600 bg-emerald-50/80 shadow-sm ring-2 ring-emerald-500/20'
                               : 'border-slate-200 hover:border-slate-300 bg-white'
                           }`}
                         >
-                          <div>
-                            <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                              <Calendar className="h-3.5 w-3.5 text-emerald-600" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 flex items-start gap-1.5">
+                              <Calendar className="h-3.5 w-3.5 shrink-0 mt-px text-emerald-600" />
                               {formatDate(dep.departureDate)} to {formatDate(dep.returnDate || dep.departureDate)}
                             </p>
-                            <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
-                              <Clock className="h-3 w-3 text-slate-400" />
+                            <p className="text-[11px] text-slate-500 mt-0.5 flex items-start gap-1 break-words">
+                              <Clock className="h-3 w-3 shrink-0 mt-px text-slate-400" />
                               Assembly: {dep.departureTime || '07:00 AM'} • {dep.meetingPoint || 'Port Terminal'}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="sm:text-right shrink-0">
                             <Badge className="rounded border-none bg-emerald-100/70 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                               {dep.remainingSlots} slot(s) open
                             </Badge>

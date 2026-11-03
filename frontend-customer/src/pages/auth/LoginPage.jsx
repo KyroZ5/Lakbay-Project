@@ -52,7 +52,7 @@ export const LoginPage = () => {
     <AuthShell>
       <div className="w-full space-y-6">
         <div className="text-center lg:text-left">
-          <h2 className="text-2xl font-extrabold text-slate-900 font-heading">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading break-words">
             Welcome back, <span className="text-gradient">Traveler</span>
           </h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -61,11 +61,11 @@ export const LoginPage = () => {
         </div>
 
         <Card className="rounded-2xl border-slate-200 shadow-md">
-          <CardContent className="p-8">
+          <CardContent className="p-5 sm:p-8">
             {error && (
               <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-xl bg-red-50 p-3.5 text-xs text-red-700 border border-red-200">
                 <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
-                <span>{error}</span>
+                <span className="min-w-0 break-words">{error}</span>
               </div>
             )}
 
@@ -85,11 +85,11 @@ export const LoginPage = () => {
               </div>
 
               <div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-x-2">
                   <Label htmlFor="login-password" className="text-xs font-semibold text-slate-700">Password</Label>
                   <Link
                     to={withRedirect('/forgot-password', redirectPath)}
-                    className="text-xs font-semibold text-emerald-600 hover:underline"
+                    className="inline-flex min-h-[32px] items-center text-xs font-semibold text-emerald-600 hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -110,7 +110,7 @@ export const LoginPage = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     aria-pressed={showPassword}
-                    className="absolute right-3 top-2.5 rounded text-slate-400 hover:text-slate-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded text-slate-400 hover:text-slate-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

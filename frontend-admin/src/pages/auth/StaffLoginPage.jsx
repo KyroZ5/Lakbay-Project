@@ -56,14 +56,14 @@ export const StaffLoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4 py-8 sm:p-6">
       <div className="w-full max-w-md space-y-6">
         {/* Brand header */}
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white font-extrabold text-2xl">
             L
           </div>
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
+          <h1 className="mt-4 text-xl sm:text-2xl font-bold tracking-tight text-white">
             Lakbay Operations Portal
           </h1>
           <p className="mt-1 text-sm text-slate-400">
@@ -73,8 +73,8 @@ export const StaffLoginPage = () => {
 
         {/* Login Form Card */}
         <Card className="border-slate-800 bg-slate-950 text-slate-100 shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+          <CardHeader className="p-5 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-emerald-500" />
               Staff Authentication
             </CardTitle>
@@ -84,7 +84,7 @@ export const StaffLoginPage = () => {
           </CardHeader>
 
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
               {(error || authError) && (
                 <div
                   id="login-error"
@@ -92,7 +92,7 @@ export const StaffLoginPage = () => {
                   className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-950/50 p-3 text-red-300 text-sm"
                 >
                   <AlertCircle className="h-5 w-5 shrink-0 text-red-400 mt-0.5" />
-                  <div>
+                  <div className="min-w-0 break-words">
                     <span className="font-semibold block">Access Restricted</span>
                     <span className="text-xs leading-relaxed">{error || authError}</span>
                   </div>
@@ -139,7 +139,7 @@ export const StaffLoginPage = () => {
                 type="submit"
                 disabled={submitting}
                 aria-busy={submitting}
-                className="w-full hover:bg-emerald-500 font-semibold py-2.5 transition-all shadow-md mt-2"
+                className="w-full h-11 hover:bg-emerald-500 font-semibold py-2.5 transition-all shadow-md mt-2"
               >
                 {submitting ? (
                   <>
@@ -155,7 +155,7 @@ export const StaffLoginPage = () => {
 
           {/* Quick Demo Credentials — only in explicitly-enabled demo builds */}
           {DEMO_LOGIN_ENABLED && (
-            <CardFooter className="flex flex-col border-t border-slate-800/80 pt-4 pb-4">
+            <CardFooter className="flex flex-col border-t border-slate-800/80 px-5 pt-4 pb-4 sm:px-6">
               <span className="text-xs font-medium text-slate-400 mb-2.5 flex items-center gap-1.5">
                 <KeyRound className="h-3.5 w-3.5 text-emerald-400" />
                 Demo Credentials (from Phase 1 Initial Seeder)

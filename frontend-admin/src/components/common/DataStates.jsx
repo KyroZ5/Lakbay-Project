@@ -19,7 +19,7 @@ export const EmptyState = ({
   const FallbackIcon = filtered ? SearchX : Inbox;
   const DisplayIcon = Icon || FallbackIcon;
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-2 px-6 py-12 text-center', className)}>
+    <div className={cn('flex flex-col items-center justify-center gap-2 px-4 py-10 text-center sm:px-6 sm:py-12', className)}>
       <div className="mb-1 rounded-full bg-slate-100 p-3 text-slate-400">
         <DisplayIcon className="h-6 w-6" aria-hidden="true" />
       </div>
@@ -55,7 +55,7 @@ export const ErrorState = ({ title = 'Unable to load data', message, onRetry, re
     )}
   >
     <AlertCircle className="h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
-    <div className="flex-1">
+    <div className="min-w-0 flex-1 break-words">
       <p className="font-semibold">{title}</p>
       {message && <p className="text-red-700">{message}</p>}
     </div>

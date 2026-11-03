@@ -44,6 +44,17 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    /* Safety net: decorative orbs / marquees must never cause sideways page scroll on phones.
+       `clip` (not `hidden`) so it doesn't create a scroll container and break position: sticky. */
+    overflow-x: clip;
+  }
+  /* Long unbroken strings (emails, booking refs, URLs) wrap instead of widening the page */
+  p, li, dd, td, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: break-word;
+  }
+  /* Leaflet maps and embedded media never exceed their container */
+  .leaflet-container {
+    max-width: 100%;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;

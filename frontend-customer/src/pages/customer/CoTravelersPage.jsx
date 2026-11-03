@@ -143,11 +143,11 @@ export const CoTravelersPage = () => {
   const showSkeleton = loading && coTravelers.length === 0;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <div className="mb-2 h-1.5 w-14 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-          <h1 className="text-3xl font-black text-slate-900 font-heading">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">
             Saved Co-Travelers
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -155,7 +155,7 @@ export const CoTravelersPage = () => {
           </p>
         </div>
 
-        <Button onClick={handleOpenAdd} className="font-bold text-xs">
+        <Button onClick={handleOpenAdd} className="w-full sm:w-auto h-10 shrink-0 font-bold text-xs">
           <Plus className="h-4 w-4 mr-1.5" />
           Add Co-Traveler
         </Button>
@@ -168,8 +168,8 @@ export const CoTravelersPage = () => {
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} aria-hidden="true" className="rounded-2xl border-slate-200 shadow-sm">
               <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <Skeleton className="h-5 w-36" />
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <Skeleton className="h-5 w-full max-w-36" />
                   <Skeleton className="h-5 w-20 rounded-full" />
                 </div>
                 <Skeleton className="h-3 w-28" />
@@ -202,10 +202,10 @@ export const CoTravelersPage = () => {
           {coTravelers.map((ct) => (
             <Card key={ct.id} className="rounded-2xl border-slate-200 shadow-sm hover:border-slate-300 transition-colors">
               <CardContent className="p-5 flex flex-col justify-between h-full">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-slate-900 text-base">{ct.fullName}</span>
-                    <Badge variant="outline" className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border-emerald-200">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span className="font-bold text-slate-900 text-base break-words min-w-0">{ct.fullName}</span>
+                    <Badge variant="outline" className="shrink-0 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border-emerald-200">
                       {ct.relationship || 'Companion'}
                     </Badge>
                   </div>
@@ -217,7 +217,7 @@ export const CoTravelersPage = () => {
                   )}
 
                   {ct.dietaryOrMedicalNotes ? (
-                    <div className="mt-2 text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    <div className="mt-2 text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 break-words">
                       <span className="font-bold text-slate-700">Notes: </span>
                       {ct.dietaryOrMedicalNotes}
                     </div>
@@ -230,7 +230,7 @@ export const CoTravelersPage = () => {
                     size="sm"
                     onClick={() => handleOpenEdit(ct)}
                     aria-label={`Edit ${ct.fullName}`}
-                    className="h-8 text-xs text-slate-600 hover:text-slate-900"
+                    className="h-9 sm:h-8 text-xs text-slate-600 hover:text-slate-900"
                   >
                     <Edit2 className="h-3.5 w-3.5 mr-1" />
                     Edit
@@ -240,7 +240,7 @@ export const CoTravelersPage = () => {
                     size="sm"
                     onClick={() => setCompanionToDelete(ct)}
                     aria-label={`Delete ${ct.fullName}`}
-                    className="h-8 text-xs text-red-600 hover:bg-red-50 hover:text-red-600"
+                    className="h-9 sm:h-8 text-xs text-red-600 hover:bg-red-50 hover:text-red-600"
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1" />
                     Delete
@@ -283,7 +283,7 @@ export const CoTravelersPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="ct-birthdate" className="text-xs font-semibold text-slate-700">Birthdate</Label>
                 <Input
@@ -291,7 +291,7 @@ export const CoTravelersPage = () => {
                   type="date"
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  className="mt-1 text-xs"
+                  className="mt-1 w-full min-w-0 text-xs"
                 />
               </div>
 

@@ -179,7 +179,7 @@ export const HomePage = () => {
   return (
     <div className="flex flex-col min-h-screen">
       {/* 1. HERO SECTION WITH GEOAPIFY AUTOCOMPLETE */}
-      <section className="relative min-h-[640px] flex items-center justify-center text-white overflow-hidden py-24 px-4 sm:px-6 lg:px-8 reveal-up">
+      <section className="relative min-h-[560px] sm:min-h-[640px] flex items-center justify-center text-white overflow-hidden py-16 sm:py-24 px-4 sm:px-6 lg:px-8 reveal-up">
         <HeroSlideshow />
         {/* Parallax glow overlay that follows mouse */}
         <motion.div
@@ -223,19 +223,19 @@ export const HomePage = () => {
           </Badge>
 
           {/* Hero headline with gradient shimmer */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight font-heading leading-tight max-w-4xl mx-auto reveal-up">
+          <h1 className="text-[2rem] sm:text-5xl md:text-6xl font-extrabold tracking-tight font-heading leading-tight max-w-4xl mx-auto break-words reveal-up">
             Discover Your Next <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 animate-[shimmer_3s_infinite] underline decoration-emerald-500/40 underline-offset-8">Adventure</span>.
           </h1>
 
-          <p className="mt-5 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto font-normal">
+          <p className="mt-4 sm:mt-5 text-base sm:text-lg md:text-xl text-slate-300 max-w-2xl mx-auto font-normal">
             Immerse yourself in breathtaking Philippine destinations with curated multi-day tour packages, transparent PHP pricing, and secure online bookings.
           </p>
 
           {/* Search Box Card with Geoapify Autocomplete */}
-          <div className="mt-10 mx-auto max-w-4xl rounded-2xl bg-white/90 backdrop-blur-xl p-4 sm:p-5 text-slate-900 shadow-2xl border border-white/30 reveal-up magnetic-card">
-            <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          <div className="mt-8 sm:mt-10 mx-auto max-w-4xl rounded-2xl bg-white/90 backdrop-blur-xl p-4 sm:p-5 text-slate-900 shadow-2xl border border-white/30 reveal-up magnetic-card">
+            <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
               {/* Destination Autocomplete Input */}
-              <div className="md:col-span-5 relative text-left">
+              <div className="sm:col-span-2 lg:col-span-5 relative text-left min-w-0">
                 <Label htmlFor="home-search-destination" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                   Destination or Place
                 </Label>
@@ -270,8 +270,8 @@ export const HomePage = () => {
                         className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <MapPin className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span className="font-semibold text-slate-900">{item.name}</span>
-                        <span className="text-xs text-slate-500 truncate">{item.formatted}</span>
+                        <span className="font-semibold text-slate-900 shrink-0 max-w-[55%] truncate">{item.name}</span>
+                        <span className="min-w-0 text-xs text-slate-500 truncate">{item.formatted}</span>
                       </button>
                     ))}
                   </div>
@@ -279,7 +279,7 @@ export const HomePage = () => {
               </div>
 
               {/* Optional Departure Date */}
-              <div className="md:col-span-3 text-left">
+              <div className="lg:col-span-3 text-left min-w-0">
                 <Label htmlFor="home-search-date" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                   Departure Date
                 </Label>
@@ -296,7 +296,7 @@ export const HomePage = () => {
               </div>
 
               {/* Number of Travelers */}
-              <div className="md:col-span-2 text-left">
+              <div className="lg:col-span-2 text-left min-w-0">
                 <Label htmlFor="home-search-travelers" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                   Travelers
                 </Label>
@@ -321,7 +321,7 @@ export const HomePage = () => {
               </div>
 
               {/* Search Submit Button */}
-              <div className="md:col-span-2 pt-2 md:pt-5">
+              <div className="sm:col-span-2 lg:col-span-2 pt-1 lg:pt-0">
                 <Button
                   type="submit"
                   className="w-full h-11 font-bold rounded-xl shadow-lg shadow-emerald-600/30 text-sm flex items-center justify-center gap-2 pulse-cta"
@@ -334,7 +334,7 @@ export const HomePage = () => {
           </div>
 
           {/* Quick CTA Links */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 reveal-up">
+          <div className="mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center gap-3 sm:gap-4 reveal-up">
             <Button asChild size="lg" className="font-bold px-7 rounded-xl shadow-lg shadow-emerald-600/25 pulse-cta magnetic-btn">
               <Link to="/packages">
                 Browse Tour Packages
@@ -354,19 +354,19 @@ export const HomePage = () => {
         <div className="orb orb-emerald -left-16 top-0 h-40 w-40 opacity-40" />
         <div className="orb orb-coral -right-10 bottom-0 h-40 w-40 opacity-30" style={{ animationDelay: '-5s' }} />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 reveal-stagger">
+          <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 reveal-stagger">
             {[
               { value: '12K+', label: 'Happy Travelers', icon: Users, color: 'from-emerald-500 to-teal-500' },
               { value: '120+', label: 'Curated Destinations', icon: MapPin, color: 'from-sky-500 to-blue-500' },
               { value: '350+', label: 'Tour Packages', icon: Compass, color: 'from-amber-500 to-orange-500' },
               { value: '4.9', label: 'Average Rating', icon: Star, color: 'from-rose-500 to-pink-500' },
             ].map((stat, i) => (
-              <div key={i} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white/80 backdrop-blur px-4 py-5 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${stat.color} text-white shadow-lg`}>
-                  <stat.icon className="h-6 w-6" />
+              <div key={i} className="flex items-center gap-3 sm:gap-4 rounded-2xl border border-slate-100 bg-white/80 backdrop-blur px-3 sm:px-4 py-4 sm:py-5 shadow-sm min-w-0 hover:shadow-lg hover:-translate-y-1 transition-all">
+                <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${stat.color} text-white shadow-lg`}>
+                  <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div>
-                  <div className="text-2xl font-black text-slate-900 font-heading count-animate">{stat.value}</div>
+                <div className="min-w-0">
+                  <div className="text-xl sm:text-2xl font-black text-slate-900 font-heading count-animate">{stat.value}</div>
                   <div className="text-xs font-semibold text-slate-500">{stat.label}</div>
                 </div>
               </div>
@@ -398,13 +398,13 @@ export const HomePage = () => {
       {promotions.length > 0 && (
         <section className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white py-6 border-y border-emerald-700/60 shadow-md">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 lg:gap-6">
+              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-slate-950 font-black shadow-lg">
                   <Sparkles className="h-6 w-6 fill-slate-950" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="rounded bg-amber-400/20 px-2 py-0.5 text-[11px] font-extrabold tracking-wider text-amber-300 uppercase border border-amber-300/30">
                       {promotions[0].badgeText || 'SPECIAL OFFER'}
                     </span>
@@ -414,19 +414,19 @@ export const HomePage = () => {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold font-heading text-white mt-0.5">
+                  <h3 className="text-lg sm:text-xl font-bold font-heading text-white mt-0.5 break-words">
                     {promotions[0].title}
                   </h3>
                   {promotions[0].subtitle && (
-                    <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-0.5">
+                    <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-0.5 break-words">
                       {promotions[0].subtitle}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 shrink-0">
-                <Button asChild className="bg-amber-400 hover:bg-amber-300 active:bg-amber-300 text-slate-950 font-extrabold text-sm px-6 shadow-md">
+              <div className="flex items-center gap-3 shrink-0 w-full lg:w-auto">
+                <Button asChild className="w-full lg:w-auto h-11 lg:h-10 whitespace-normal text-center bg-amber-400 hover:bg-amber-300 active:bg-amber-300 text-slate-950 font-extrabold text-sm px-6 shadow-md">
                   {(() => {
                     const promoLink = resolvePromoLink(promotions[0].actionUrl);
                     const content = (
@@ -449,21 +449,21 @@ export const HomePage = () => {
       )}
 
       {/* 2. FEATURED DESTINATIONS */}
-      <section className="py-20 bg-white reveal-up">
+      <section className="py-14 sm:py-20 bg-white reveal-up">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-            <div>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-12">
+            <div className="min-w-0">
               <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
                 Top Picks
               </Badge>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 font-heading">
                 Featured Destinations
               </h2>
               <p className="mt-2 text-slate-600 max-w-xl text-sm">
                 Explore the most sought-after islands, coastal paradises, and cultural landscapes across the archipelago.
               </p>
             </div>
-            <Button asChild variant="outline" className="mt-4 md:mt-0 self-start md:self-auto font-semibold text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700">
+            <Button asChild variant="outline" className="shrink-0 self-start md:self-auto font-semibold text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700">
               <Link to="/destinations">
                 View All Destinations
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -482,10 +482,10 @@ export const HomePage = () => {
           )}
 
           {showDestinationSkeleton && (
-            <LoadingRegion label="Loading featured destinations" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <LoadingRegion label="Loading featured destinations" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm" aria-hidden="true">
-                  <Skeleton className="h-64 w-full rounded-none" />
+                  <Skeleton className="h-52 sm:h-64 w-full rounded-none" />
                   <div className="p-5 space-y-2">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-2/3" />
@@ -518,7 +518,7 @@ export const HomePage = () => {
                 key={dest.id}
                 className="group overflow-hidden rounded-2xl border-slate-200/80 shadow-sm hover:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.35)] transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02]"
               >
-                <div className="relative h-64 overflow-hidden">
+                <div className="relative h-52 sm:h-64 overflow-hidden">
                   <div
                     role="img"
                     aria-label={dest.name}
@@ -530,10 +530,10 @@ export const HomePage = () => {
                     <span className="rounded-md bg-emerald-600/90 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider">
                       {dest.category || 'Island'}
                     </span>
-                    <h3 className="text-xl font-bold font-heading mt-2">{dest.name}</h3>
-                    <p className="text-xs text-slate-300 flex items-center gap-1 mt-0.5">
-                      <MapPin className="h-3.5 w-3.5 text-emerald-400" />
-                      {dest.location}
+                    <h3 className="text-xl font-bold font-heading mt-2 break-words">{dest.name}</h3>
+                    <p className="text-xs text-slate-300 flex items-center gap-1 mt-0.5 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                      <span className="truncate">{dest.location}</span>
                     </p>
                   </div>
                 </div>
@@ -541,11 +541,11 @@ export const HomePage = () => {
                   <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
                     {dest.description}
                   </p>
-                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
                     <span className="text-xs font-semibold text-emerald-700">
                       {dest.relatedPackages?.length || 2}+ Tour Packages
                     </span>
-                    <Button asChild size="sm" className="bg-slate-900 hover:bg-emerald-600 active:bg-emerald-700 font-semibold text-xs">
+                    <Button asChild size="sm" className="shrink-0 h-10 sm:h-9 bg-slate-900 hover:bg-emerald-600 active:bg-emerald-700 font-semibold text-xs">
                       <Link to={`/destinations/${dest.id}`} aria-label={`Explore ${dest.name}`}>
                         Explore
                       </Link>
@@ -561,19 +561,19 @@ export const HomePage = () => {
       {/* 4. POPULAR TOUR PACKAGES */}
       <section className="py-20 bg-slate-50 border-y border-slate-200 reveal-up">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-            <div>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 sm:mb-12">
+            <div className="min-w-0">
               <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
                 Best Sellers
               </Badge>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 font-heading">
                 Popular Tour Packages
               </h2>
               <p className="mt-2 text-slate-600 max-w-xl text-sm">
                 Curated multi-day itineraries with daily activity schedules, licensed guides, and seamless booking.
               </p>
             </div>
-            <Button asChild variant="outline" className="mt-4 md:mt-0 self-start md:self-auto font-semibold text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700">
+            <Button asChild variant="outline" className="shrink-0 self-start md:self-auto font-semibold text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700">
               <Link to="/packages">
                 Browse All Packages
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -582,10 +582,10 @@ export const HomePage = () => {
           </div>
 
           {showPackageSkeleton && (
-            <LoadingRegion label="Loading popular tour packages" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <LoadingRegion label="Loading popular tour packages" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-hidden="true">
-                  <Skeleton className="h-56 w-full rounded-none" />
+                  <Skeleton className="h-48 sm:h-56 w-full rounded-none" />
                   <div className="p-6 space-y-3">
                     <div className="flex items-center justify-between">
                       <Skeleton className="h-3 w-24" />
@@ -629,7 +629,7 @@ export const HomePage = () => {
                 key={pkg.id}
                 className="group flex flex-col overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-[0_20px_40px_-10px_rgba(16,185,129,0.35)] transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02]"
               >
-                <div className="relative h-56 overflow-hidden">
+                <div className="relative h-48 sm:h-56 overflow-hidden">
                   <div
                     role="img"
                     aria-label={pkg.name}
@@ -641,7 +641,7 @@ export const HomePage = () => {
                       {pkg.durationDays}D / {pkg.durationNights}N
                     </Badge>
                   </div>
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                  <div className="absolute top-3 right-3 left-24 flex flex-wrap items-center justify-end gap-1.5">
                     {pkg.discountPercent > 0 && (
                       <Badge className="bg-rose-600 text-white font-extrabold shadow-sm text-xs px-2 py-0.5">
                         {pkg.discountPercent}% OFF
@@ -653,24 +653,24 @@ export const HomePage = () => {
                   </div>
                 </div>
 
-                <CardContent className="p-6 flex-1 flex flex-col justify-between">
+                <CardContent className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {pkg.destinationName || 'Philippines'}
+                      <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1 min-w-0">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{pkg.destinationName || 'Philippines'}</span>
                       </p>
                       {pkg.averageRating > 0 ? (
-                        <div className="flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
+                        <div className="flex shrink-0 items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
                           <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
                           <span>{Number(pkg.averageRating).toFixed(1)}</span>
                           <span className="text-slate-400 font-normal text-[10px]">({pkg.reviewCount || 0})</span>
                         </div>
                       ) : (
-                        <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">New</span>
+                        <span className="shrink-0 text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">New</span>
                       )}
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 font-heading group-hover:text-emerald-700 transition-colors">
+                    <h3 className="text-lg font-bold text-slate-900 font-heading group-hover:text-emerald-700 transition-colors break-words">
                       {pkg.name}
                     </h3>
                     <p className="mt-2 text-xs text-slate-500 line-clamp-2 leading-relaxed">
@@ -689,7 +689,7 @@ export const HomePage = () => {
                             </span>
                             <span className="text-[10px] text-slate-500">/ person</span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs mt-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs mt-0.5">
                             <span className="text-slate-400 line-through">
                               {formatCurrency(pkg.pricePerPerson)}
                             </span>
@@ -709,12 +709,12 @@ export const HomePage = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <Button asChild size="sm" variant="outline" className="font-semibold text-xs">
+                      <Button asChild size="sm" variant="outline" className="h-10 sm:h-9 font-semibold text-xs">
                         <Link to={`/packages/${pkg.id}`} aria-label={`View details for ${pkg.name}`}>
                           Details
                         </Link>
                       </Button>
-                      <Button asChild size="sm" className="font-bold text-xs shadow-md shadow-emerald-500/20">
+                      <Button asChild size="sm" className="h-10 sm:h-9 font-bold text-xs shadow-md shadow-emerald-500/20">
                         <Link to={`/packages/${pkg.id}`} aria-label={`Book ${pkg.name}`}>
                           Book Now
                         </Link>
@@ -729,13 +729,13 @@ export const HomePage = () => {
       </section>
 
       {/* 5. WHY CHOOSE US */}
-      <section className="py-20 bg-white reveal-up">
+      <section className="py-14 sm:py-20 bg-white reveal-up">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
             <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
               The Lakbay Difference
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 font-heading">
               Why Travel With Us
             </h2>
             <p className="mt-2 text-slate-600 text-sm">
@@ -743,7 +743,7 @@ export const HomePage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8 reveal-stagger">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5 lg:gap-6 xl:gap-8 reveal-stagger">
             {[
               {
                 icon: Compass,
@@ -778,7 +778,7 @@ export const HomePage = () => {
             ].map((feature, i) => (
               <div
                 key={i}
-                className="group flex flex-col items-center text-center p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-200 hover:bg-white transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-emerald-500/10"
+                className={`group flex flex-col items-center text-center p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-100 ${i === 4 ? 'sm:col-span-2 md:col-span-1' : ''} hover:border-emerald-200 hover:bg-white transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-emerald-500/10`}
               >
                 <div className={`relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.color} text-white mb-4 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
                   <span className="absolute inset-0 rounded-2xl ring-1 ring-white/30" />
@@ -793,16 +793,16 @@ export const HomePage = () => {
       </section>
 
       {/* 6. HOW IT WORKS */}
-      <section className="relative py-20 bg-slate-900 text-white overflow-hidden reveal-up">
+      <section className="relative py-14 sm:py-20 bg-slate-900 text-white overflow-hidden reveal-up">
         <div className="pointer-events-none absolute inset-0 bg-dots-light opacity-10" />
         <div className="orb orb-emerald -left-20 top-10 h-64 w-64 opacity-40" />
         <div className="orb orb-teal right-0 bottom-0 h-56 w-56 opacity-30" style={{ animationDelay: '-7s' }} />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
             <Badge className="bg-emerald-500/20 text-emerald-300 border-none font-semibold mb-2">
               Simple 5-Step Process
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-heading">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white font-heading">
               How It Works
             </h2>
             <p className="mt-2 text-slate-400 text-sm">
@@ -810,9 +810,9 @@ export const HomePage = () => {
             </p>
           </div>
 
-          <div className="relative grid grid-cols-1 md:grid-cols-5 gap-6 reveal-stagger">
+          <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-12 lg:gap-y-6 reveal-stagger">
             {/* Connecting dashed line (desktop) */}
-            <div className="hidden md:block absolute left-0 right-0 top-1 -z-0 border-t-2 border-dashed border-emerald-500/30" aria-hidden="true" />
+            <div className="hidden lg:block absolute left-0 right-0 top-1 -z-0 border-t-2 border-dashed border-emerald-500/30" aria-hidden="true" />
             {[
               { step: '01', title: 'Explore Destinations', desc: 'Browse our curated destination guides with live weather & Leaflet maps.', emoji: '🗺️' },
               { step: '02', title: 'Choose a Tour', desc: 'Select multi-day tour packages with day-by-day activity itineraries.', emoji: '🏝️' },
@@ -820,7 +820,7 @@ export const HomePage = () => {
               { step: '04', title: 'Book & Pay in PHP', desc: 'Pay securely via Stripe Checkout with card or mobile payment options.', emoji: '💳' },
               { step: '05', title: 'Travel & Check In', desc: 'Receive instant booking reference, itinerary vouchers, and guide support.', emoji: '🛫' },
             ].map((s, i) => (
-              <div key={i} className="group relative flex flex-col items-center text-center p-6 rounded-2xl bg-slate-800/80 border border-slate-700/60 hover:border-emerald-500/50 hover:bg-slate-800 transition-all duration-300 hover:-translate-y-1.5">
+              <div key={i} className="group relative flex flex-col items-center text-center p-5 lg:p-4 xl:p-6 rounded-2xl bg-slate-800/80 border border-slate-700/60 hover:border-emerald-500/50 hover:bg-slate-800 transition-all duration-300 hover:-translate-y-1.5">
                 <div className="relative z-10 -mt-12 mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xl shadow-lg shadow-emerald-500/40 ring-4 ring-slate-900 group-hover:scale-110 transition-transform">
                   {s.emoji}
                 </div>
@@ -834,16 +834,16 @@ export const HomePage = () => {
       </section>
 
       {/* 6.5 TRAVELER TESTIMONIALS */}
-      <section className="relative py-20 bg-gradient-to-b from-white via-emerald-50/40 to-white overflow-hidden reveal-up">
+      <section className="relative py-14 sm:py-20 bg-gradient-to-b from-white via-emerald-50/40 to-white overflow-hidden reveal-up">
         <div className="orb orb-coral -right-16 top-10 h-56 w-56 opacity-30" />
         <div className="orb orb-sky -left-14 bottom-0 h-52 w-52 opacity-30" style={{ animationDelay: '-4s' }} />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center max-w-2xl mx-auto mb-14">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
             <Badge className="bg-amber-100 text-amber-800 border-none font-semibold mb-2">
               <Star className="h-3 w-3 mr-1 fill-amber-500 text-amber-500" />
               Traveler Stories
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 font-heading">
               Loved by Adventurers
             </h2>
             <p className="mt-2 text-slate-600 text-sm">
@@ -851,7 +851,7 @@ export const HomePage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 reveal-stagger">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-6 reveal-stagger">
             {[
               {
                 name: 'Maria Santos',
@@ -891,10 +891,10 @@ export const HomePage = () => {
                   “{t.quote}”
                 </blockquote>
                 <figcaption className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br ${t.gradient} text-white text-sm font-black shadow-md ring-2 ring-white`}>
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${t.gradient} text-white text-sm font-black shadow-md ring-2 ring-white`}>
                     {t.initials}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm font-bold text-slate-900">{t.name}</div>
                     <div className="text-[11px] font-semibold text-emerald-700">{t.trip}</div>
                   </div>
@@ -904,7 +904,7 @@ export const HomePage = () => {
           </div>
 
           {/* Photo strip */}
-          <div className="mt-12 grid grid-cols-4 gap-3 reveal-stagger">
+          <div className="mt-10 sm:mt-12 grid grid-cols-2 md:grid-cols-4 gap-3 reveal-stagger">
             {[
               { src: '/images/island.jpg', caption: 'Coron, Palawan' },
               { src: '/images/water.jpg', caption: 'Siargao' },
@@ -924,13 +924,13 @@ export const HomePage = () => {
       </section>
 
       {/* 7. FREQUENTLY ASKED QUESTIONS */}
-      <section id="faqs" className="scroll-mt-20 py-20 bg-slate-50 reveal-up">
+      <section id="faqs" className="scroll-mt-20 py-14 sm:py-20 bg-slate-50 reveal-up">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
-          <div className="text-center mb-14">
+          <div className="text-center mb-10 sm:mb-14">
             <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-2">
               Got Questions?
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 font-heading">
               Frequently Asked Questions
             </h2>
             <p className="mt-2 text-slate-600 text-sm">
@@ -942,7 +942,7 @@ export const HomePage = () => {
             {faqs.map((faq, i) => (
               <div
                 key={i}
-                className={`rounded-xl border bg-white p-5 shadow-sm transition-all ${
+                className={`rounded-xl border bg-white p-4 sm:p-5 shadow-sm transition-all ${
                   openFaq === i
                     ? 'border-emerald-300 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-200/60'
                     : 'border-slate-200 hover:border-emerald-200 hover:shadow-md'
@@ -953,11 +953,11 @@ export const HomePage = () => {
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   aria-expanded={openFaq === i}
                   aria-controls={`home-faq-${i}`}
-                  className="flex w-full items-center justify-between gap-3 rounded-md text-left font-bold text-slate-900 text-base cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="flex w-full items-center justify-between gap-3 rounded-md text-left font-bold text-slate-900 text-sm sm:text-base min-h-[40px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <span>{faq.q}</span>
                   <ChevronDown
-                    className={`h-5 w-5 text-slate-400 transition-transform duration-200 ${
+                    className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 ${
                       openFaq === i ? 'rotate-180 text-emerald-600' : ''
                     }`}
                   />
@@ -984,18 +984,18 @@ export const HomePage = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-emerald-800/85 to-teal-900/75" />
           <div className="orb orb-coral right-10 top-4 h-40 w-40 opacity-40" />
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative py-16 text-center text-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative py-12 sm:py-16 text-center text-white">
             <Badge className="bg-white/15 text-emerald-200 border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider mb-5">
               <Sparkles className="h-3.5 w-3.5 mr-1.5 inline" />
               Your island is waiting
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-extrabold font-heading max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-heading max-w-2xl mx-auto">
               Ready for your next <span className="text-gradient-warm">adventure</span>?
             </h2>
             <p className="mt-3 text-emerald-50/90 max-w-xl mx-auto text-sm sm:text-base">
               Join thousands of travelers who booked transparent, guide-led Philippine tours with instant Stripe confirmation.
             </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center gap-3 sm:gap-4">
               <Button asChild size="lg" className="font-bold px-8 rounded-xl bg-white text-emerald-800 hover:bg-emerald-50 shadow-xl shadow-black/20">
                 <Link to="/packages">
                   Start Exploring
@@ -1015,10 +1015,10 @@ export const HomePage = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-8 right-8 z-50 w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/40 hover:bg-emerald-500 hover:scale-110 transition-all duration-300 back-to-top"
+          className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/40 hover:bg-emerald-500 hover:scale-110 transition-all duration-300 back-to-top"
           aria-label="Back to top"
         >
-          <ArrowRight className="h-7 w-7 rotate-90" />
+          <ArrowRight className="h-6 w-6 sm:h-7 sm:w-7 rotate-90" />
         </motion.button>
       </div>
   );

@@ -49,7 +49,7 @@ export const ItineraryMap = ({ itinerary = [], height = '450px', className = '' 
   const polylineCoords = stops.map((s) => [s.lat, s.lng]);
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-slate-200 shadow-sm relative z-10 ${className}`} style={{ height }}>
+    <div className={`w-full max-h-[60vh] min-h-[240px] overflow-hidden rounded-xl border border-slate-200 shadow-sm relative z-10 ${className}`} style={{ height }}>
       <MapContainer
         center={[centerLat, centerLng]}
         zoom={stops.length > 1 ? 11 : 13}
@@ -83,7 +83,7 @@ export const ItineraryMap = ({ itinerary = [], height = '450px', className = '' 
             icon={createNumberedIcon(stop.stopNumber)}
           >
             <Popup>
-              <div className="p-1 max-w-[220px]">
+              <div className="p-1 max-w-[min(220px,70vw)] break-words">
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 uppercase">
                     Stop #{stop.stopNumber}

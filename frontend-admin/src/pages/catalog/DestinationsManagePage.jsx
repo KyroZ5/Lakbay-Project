@@ -34,6 +34,7 @@ import { ImageUpload } from '../../components/common/ImageUpload';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { EmptyState, ErrorState } from '../../components/common/DataStates';
 import { TableRowsSkeleton } from '../../components/common/Skeletons';
+import { Skeleton } from '../../components/ui/skeleton';
 import { FieldError } from '../../components/common/FieldError';
 import { notify, getErrorMessage } from '../../lib/notify';
 import {
@@ -296,6 +297,64 @@ export const DestinationsManagePage = () => {
     ? REGIONS
     : [...REGIONS, formData.region];
 
+  const renderDestinationStatus = (dest) => (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePublish(dest)}
+                          disabled={togglingId === dest.id}
+                          aria-label={`${dest.isPublished ? 'Unpublish' : 'Publish'} ${dest.name}`}
+                          className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        >
+                          {dest.isPublished ? (
+                            <Badge variant="success" className="flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Published
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-500 border-slate-300">
+                              Draft (Hidden)
+                            </Badge>
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Click to toggle publish status</TooltipContent>
+                    </Tooltip>
+  );
+
+  const renderDestinationActions = (dest, className = '') => (
+                    <div className={`flex flex-wrap items-center gap-1 ${className}`}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditModal(dest)}
+                            aria-label={`Edit ${dest.name}`}
+                            className="h-9 w-9 md:h-8 md:w-8 p-0 text-slate-600 hover:text-emerald-600"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit destination</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDestinationToDelete(dest)}
+                            aria-label={`Delete ${dest.name}`}
+                            className="h-9 w-9 md:h-8 md:w-8 p-0 text-slate-600 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete destination</TooltipContent>
+                      </Tooltip>
+                    </div>
+  );
+
   // Skeleton only on initial load; refreshes keep the current rows visible
   const showSkeleton = loading && destinations.length === 0;
 
@@ -303,16 +362,16 @@ export const DestinationsManagePage = () => {
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 break-words">
             Destinations Catalog
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Configure Philippine travel hubs, GPS geo-coordinates, and publication visibility.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={openCreateModal} className="font-medium flex items-center gap-1.5 shadow-sm">
+        <div className="flex items-center gap-3 shrink-0">
+          <Button onClick={openCreateModal} className="w-full sm:w-auto h-10 font-medium flex items-center justify-center gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
             Add Destination
           </Button>
@@ -320,8 +379,8 @@ export const DestinationsManagePage = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search destination, region..."
@@ -336,7 +395,7 @@ export const DestinationsManagePage = () => {
             value={categoryFilter || ALL_CATEGORIES}
             onValueChange={(v) => setCategoryFilter(v === ALL_CATEGORIES ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by category" className="w-[180px] text-slate-700">
+            <SelectTrigger aria-label="Filter by category" className="min-w-0 flex-1 sm:flex-none sm:w-[180px] text-slate-700">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
@@ -356,7 +415,7 @@ export const DestinationsManagePage = () => {
                 onClick={fetchDestinations}
                 disabled={loading}
                 aria-label="Refresh destinations"
-                className="text-slate-500 hover:text-slate-800"
+                className="h-10 w-10 shrink-0 p-0 text-slate-500 hover:text-slate-800"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
@@ -370,8 +429,8 @@ export const DestinationsManagePage = () => {
       {error && <ErrorState message={error} onRetry={fetchDestinations} retrying={loading} />}
 
       {/* Destinations Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
-        <Table>
+      <div className="hidden md:block min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
+        <Table className="min-w-[820px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[80px]">Preview</TableHead>
@@ -446,72 +505,106 @@ export const DestinationsManagePage = () => {
                       {dest.category}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs font-mono text-slate-500">
+                  <TableCell className="text-xs font-mono text-slate-500 whitespace-nowrap">
                     {Number.isFinite(Number(dest.coordinates?.lat)) && Number.isFinite(Number(dest.coordinates?.lng))
                       ? `${Number(dest.coordinates.lat).toFixed(4)}, ${Number(dest.coordinates.lng).toFixed(4)}`
                       : 'Not set'}
                   </TableCell>
                   <TableCell>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePublish(dest)}
-                          disabled={togglingId === dest.id}
-                          aria-label={`${dest.isPublished ? 'Unpublish' : 'Publish'} ${dest.name}`}
-                          className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                        >
-                          {dest.isPublished ? (
-                            <Badge variant="success" className="flex items-center gap-1">
-                              <Check className="h-3 w-3" /> Published
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-slate-500 border-slate-300">
-                              Draft (Hidden)
-                            </Badge>
-                          )}
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>Click to toggle publish status</TooltipContent>
-                    </Tooltip>
+                    {renderDestinationStatus(dest)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditModal(dest)}
-                            aria-label={`Edit ${dest.name}`}
-                            className="h-8 w-8 p-0 text-slate-600 hover:text-emerald-600"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Edit destination</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDestinationToDelete(dest)}
-                            aria-label={`Delete ${dest.name}`}
-                            className="h-8 w-8 p-0 text-slate-600 hover:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete destination</TooltipContent>
-                      </Tooltip>
-                    </div>
+                    {renderDestinationActions(dest, 'justify-end')}
                   </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Destinations Card List (mobile) */}
+      <div className="space-y-3 md:hidden" aria-busy={loading}>
+        {showSkeleton ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} aria-hidden="true" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex gap-3">
+                <Skeleton className="h-14 w-16 shrink-0 rounded" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : filtered.length === 0 ? (
+          error ? null : (
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+              {destinations.length > 0 ? (
+                <EmptyState filtered onClearFilters={clearFilters} />
+              ) : (
+                <EmptyState
+                  icon={MapPin}
+                  title="No destinations yet"
+                  description="Add your first destination to start building the travel catalog."
+                  action={
+                    <Button size="sm" onClick={openCreateModal}>
+                      <Plus className="mr-1.5 h-4 w-4" />
+                      Add Destination
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          )
+        ) : (
+          filtered.map((dest) => (
+            <div key={dest.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+              <div className="flex gap-3">
+                {dest.imageUrls?.[0] ? (
+                  <img
+                    src={dest.imageUrls[0]}
+                    alt={dest.name}
+                    className="h-14 w-16 shrink-0 rounded object-cover border border-slate-200"
+                  />
+                ) : (
+                  <div className="flex h-14 w-16 shrink-0 items-center justify-center rounded bg-slate-100 text-slate-400">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="min-w-0 font-semibold text-slate-900 break-words">{dest.name}</span>
+                    {dest.isFeatured && (
+                      <Badge variant="warning" className="text-[10px] px-1.5 py-0">
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-sm text-slate-600 break-words">{dest.region}</div>
+                  <div className="text-xs text-slate-400 break-words">{dest.location}</div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {dest.category}
+                </Badge>
+                <span className="text-xs font-mono text-slate-500 break-all">
+                  {Number.isFinite(Number(dest.coordinates?.lat)) && Number.isFinite(Number(dest.coordinates?.lng))
+                    ? `${Number(dest.coordinates.lat).toFixed(4)}, ${Number(dest.coordinates.lng).toFixed(4)}`
+                    : 'Not set'}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                {renderDestinationStatus(dest)}
+                {renderDestinationActions(dest, 'justify-end')}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Create / Edit Modal Dialog */}
@@ -615,7 +708,7 @@ export const DestinationsManagePage = () => {
                   onClick={handleAutoGeocode}
                   disabled={geocoding}
                   aria-describedby={geocodeHint ? 'dest-geocode-hint' : undefined}
-                  className="h-7 text-xs bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                  className="h-9 sm:h-7 text-xs bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50"
                 >
                   {geocoding && <RefreshCw className="mr-1.5 h-3 w-3 animate-spin" />}
                   {geocoding ? 'Geocoding...' : 'Auto-Detect via Geoapify'}
@@ -623,7 +716,7 @@ export const DestinationsManagePage = () => {
               </div>
               <FieldError id="dest-geocode-hint">{geocodeHint}</FieldError>
               <FieldError id="dest-coords-error">{formErrors.coordinates}</FieldError>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="dest-lat" className="text-[11px] text-slate-500">
                     Latitude
@@ -689,7 +782,7 @@ export const DestinationsManagePage = () => {
             />
 
             {/* Visibility Toggles */}
-            <div className="flex flex-wrap items-center gap-6 pt-2">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
               <div className="flex items-center gap-2">
                 <Switch
                   id="dest-published"

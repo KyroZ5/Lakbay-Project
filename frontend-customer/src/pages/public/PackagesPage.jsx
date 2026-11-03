@@ -18,8 +18,8 @@ import { Search, MapPin, Calendar, Clock, Star, Percent, Compass } from 'lucide-
 const PackageCardSkeleton = () => (
   <div className="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-hidden="true">
     <div>
-      <Skeleton className="h-60 w-full rounded-none" />
-      <div className="p-6">
+      <Skeleton className="h-48 sm:h-56 lg:h-60 w-full rounded-none" />
+      <div className="p-5 sm:p-6">
         <div className="flex items-center justify-between gap-2 mb-2">
           <Skeleton className="h-3 w-28" />
           <Skeleton className="h-4 w-12 rounded-full" />
@@ -30,7 +30,7 @@ const PackageCardSkeleton = () => (
         <Skeleton className="mt-4 h-9 w-full rounded-xl" />
       </div>
     </div>
-    <div className="p-6 pt-4 border-t border-slate-100 mt-4 flex items-center justify-between">
+    <div className="p-5 sm:p-6 pt-4 sm:pt-4 border-t border-slate-100 mt-4 flex flex-wrap items-center justify-between gap-3">
       <div>
         <Skeleton className="h-2.5 w-16" />
         <Skeleton className="mt-1.5 h-7 w-28" />
@@ -173,21 +173,21 @@ export const PackagesPage = () => {
   const chipFocus = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1';
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-8 sm:py-12">
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header banner */}
-        <div className="relative mb-10 overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white shadow-2xl shadow-emerald-200/50">
+        <div className="relative mb-8 sm:mb-10 overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white shadow-2xl shadow-emerald-200/50">
           <img src="/images/island.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-50" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 via-emerald-900/75 to-transparent" />
           <div className="orb orb-coral right-6 -top-8 h-40 w-40 opacity-40" />
-          <div className="relative px-6 py-12 sm:px-10 sm:py-14 max-w-3xl">
+          <div className="relative px-5 py-10 sm:px-10 sm:py-14 max-w-3xl">
             <Badge className="bg-white/15 text-emerald-200 border-white/25 font-semibold mb-3 px-3 py-1">
               Tour Catalog
             </Badge>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-heading">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-heading break-words">
               Philippine <span className="text-gradient-warm">Tour Packages</span>
             </h1>
-            <p className="mt-3 text-emerald-50/90 text-base max-w-2xl">
+            <p className="mt-3 text-emerald-50/90 text-sm sm:text-base max-w-2xl">
               Multi-day handcrafted itineraries with daily activity schedules, licensed guides, and transparent Philippine Peso pricing.
             </p>
             <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-wider">
@@ -201,11 +201,11 @@ export const PackagesPage = () => {
         </div>
 
         {/* Filter Controls Toolbar */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50 mb-10">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-lg shadow-slate-200/50 mb-8 sm:mb-10">
           <form onSubmit={handleSearchSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* Keyword Search */}
-              <div className="lg:col-span-2 relative">
+              <div className="sm:col-span-2 lg:col-span-2 relative">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   type="text"
@@ -270,7 +270,7 @@ export const PackagesPage = () => {
             </div>
 
             {/* Category Pills & Price Filter Row */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-3 border-t border-slate-100">
               {/* Category Pills */}
               <div className="flex flex-wrap items-center gap-1.5">
                 {categories.map((cat) => {
@@ -281,7 +281,7 @@ export const PackagesPage = () => {
                       type="button"
                       onClick={() => setCategory(cat === 'All' ? '' : cat)}
                       aria-pressed={isActive}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors cursor-pointer ${chipFocus} ${
+                      className={`rounded-full px-3 py-1.5 sm:py-1 text-xs font-semibold transition-colors cursor-pointer ${chipFocus} ${
                         isActive
                           ? 'bg-emerald-600 text-white shadow-sm'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -297,7 +297,7 @@ export const PackagesPage = () => {
                   type="button"
                   onClick={() => setOnlyDiscounted(!onlyDiscounted)}
                   aria-pressed={onlyDiscounted}
-                  className={`rounded-full px-3 py-1 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ml-1 ${chipFocus} ${
+                  className={`rounded-full px-3 py-1.5 sm:py-1 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 sm:ml-1 ${chipFocus} ${
                     onlyDiscounted
                       ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-400'
                       : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
@@ -343,37 +343,41 @@ export const PackagesPage = () => {
               </div>
 
               {/* Price Filter Inputs & Action */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400">PHP</span>
-                <Input
-                  type="number"
-                  placeholder="Min ₱"
-                  aria-label="Minimum price"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                  className="w-24 h-9 text-xs"
-                />
-                <span className="text-slate-300">-</span>
-                <Input
-                  type="number"
-                  placeholder="Max ₱"
-                  aria-label="Maximum price"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  className="w-24 h-9 text-xs"
-                />
-                <Button type="submit" size="sm" className="h-9 font-semibold text-xs">
-                  Apply
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleResetFilters}
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 text-xs text-slate-500 hover:text-slate-800"
-                >
-                  Reset
-                </Button>
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+                  <span className="text-xs font-semibold text-slate-400 shrink-0">PHP</span>
+                  <Input
+                    type="number"
+                    placeholder="Min ₱"
+                    aria-label="Minimum price"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="min-w-0 flex-1 sm:w-24 sm:flex-none h-10 sm:h-9 text-xs"
+                  />
+                  <span className="text-slate-300 shrink-0">-</span>
+                  <Input
+                    type="number"
+                    placeholder="Max ₱"
+                    aria-label="Maximum price"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="min-w-0 flex-1 sm:w-24 sm:flex-none h-10 sm:h-9 text-xs"
+                  />
+                </div>
+                <div className="flex w-full items-center gap-2 sm:w-auto">
+                  <Button type="submit" size="sm" className="h-10 sm:h-9 flex-1 sm:flex-none font-semibold text-xs">
+                    Apply
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleResetFilters}
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 sm:h-9 flex-1 sm:flex-none text-xs text-slate-500 hover:text-slate-800"
+                  >
+                    Reset
+                  </Button>
+                </div>
               </div>
             </div>
           </form>
@@ -385,7 +389,7 @@ export const PackagesPage = () => {
         )}
 
         {showSkeleton ? (
-          <LoadingRegion label="Loading tour packages" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <LoadingRegion label="Loading tour packages" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {Array.from({ length: 6 }).map((_, i) => (
               <PackageCardSkeleton key={i} />
             ))}
@@ -418,14 +422,14 @@ export const PackagesPage = () => {
             </div>
           )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" aria-busy={loading}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8" aria-busy={loading}>
             {visiblePackages.map((pkg) => (
               <Card
                 key={pkg.id}
                 className="group card-tilt flex flex-col justify-between overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm"
               >
                 <div>
-                  <div className="relative h-60 overflow-hidden">
+                  <div className="relative h-48 sm:h-56 lg:h-60 overflow-hidden">
                     <img
                       src={pkg.imageUrls?.[0] || '/images/el-nido.jpg'}
                       alt={pkg.name}
@@ -438,7 +442,7 @@ export const PackagesPage = () => {
                         {pkg.durationDays}D / {pkg.durationNights}N
                       </Badge>
                     </div>
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    <div className="absolute top-3 right-3 flex max-w-[60%] flex-wrap items-center justify-end gap-1.5">
                       {pkg.discountPercent > 0 && (
                         <Badge className="bg-rose-600 text-white font-extrabold text-xs shadow-sm px-2 py-0.5">
                           {pkg.discountPercent}% OFF
@@ -450,23 +454,23 @@ export const PackagesPage = () => {
                     </div>
                   </div>
 
-                  <CardContent className="p-6">
+                  <CardContent className="p-5 sm:p-6">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" />
+                      <p className="min-w-0 truncate text-xs font-semibold text-emerald-700 uppercase tracking-wider flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
                         {pkg.destinationName || 'Philippines'}
                       </p>
                       {pkg.averageRating > 0 ? (
-                        <div className="flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
+                        <div className="flex shrink-0 items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/50">
                           <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
                           <span>{Number(pkg.averageRating).toFixed(1)}</span>
                           <span className="text-slate-400 font-normal text-[10px]">({pkg.reviewCount || 0})</span>
                         </div>
                       ) : (
-                        <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">New</span>
+                        <span className="shrink-0 text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">New</span>
                       )}
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 font-heading group-hover:text-emerald-700 transition-colors">
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 font-heading break-words group-hover:text-emerald-700 transition-colors">
                       {pkg.name}
                     </h3>
                     <p className="mt-2 text-xs text-slate-600 line-clamp-2 leading-relaxed">
@@ -474,7 +478,7 @@ export const PackagesPage = () => {
                     </p>
 
                     {/* Schedule availability indicators */}
-                    <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 p-2.5 text-xs text-slate-600">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-600">
                       <span className="flex items-center gap-1 font-medium">
                         <Calendar className="h-3.5 w-3.5 text-emerald-600" />
                         {pkg.nextDepartureDate ? `Next: ${formatDate(pkg.nextDepartureDate)}` : 'Upcoming departures'}
@@ -486,15 +490,15 @@ export const PackagesPage = () => {
                   </CardContent>
                 </div>
 
-                <div className="p-6 pt-0 border-t border-slate-100 mt-4 flex items-center justify-between">
-                  <div>
+                <div className="p-5 sm:p-6 pt-0 sm:pt-0 border-t border-slate-100 mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <span className="text-[10px] text-slate-400 block font-medium">Per traveler</span>
                     {pkg.discountPercent > 0 ? (
                       <div>
                         <span className="text-2xl font-black text-emerald-700 font-heading">
                           {formatCurrency(pkg.effectivePrice || pkg.discountPrice)}
                         </span>
-                        <div className="flex items-center gap-1.5 text-xs">
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
                           <span className="text-slate-400 line-through">
                             {formatCurrency(pkg.pricePerPerson)}
                           </span>
@@ -509,11 +513,11 @@ export const PackagesPage = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-2">
-                    <Button asChild size="sm" variant="outline" className="font-semibold text-xs">
+                  <div className="flex shrink-0 gap-2">
+                    <Button asChild size="sm" variant="outline" className="h-10 sm:h-9 font-semibold text-xs">
                       <Link to={`/packages/${pkg.id}`}>Details</Link>
                     </Button>
-                    <Button asChild size="sm" className="font-bold text-xs shadow-md shadow-emerald-500/20">
+                    <Button asChild size="sm" className="h-10 sm:h-9 font-bold text-xs shadow-md shadow-emerald-500/20">
                       <Link to={`/packages/${pkg.id}`}>Book Tour</Link>
                     </Button>
                   </div>

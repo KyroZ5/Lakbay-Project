@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 
 const PackageDetailSkeleton = () => (
-  <LoadingRegion label="Loading tour package" className="min-h-screen bg-slate-50 py-10">
+  <LoadingRegion label="Loading tour package" className="min-h-screen bg-slate-50 py-6 sm:py-10">
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl" aria-hidden="true">
       <Skeleton className="h-4 w-44 mb-6" />
 
@@ -51,29 +51,29 @@ const PackageDetailSkeleton = () => (
           <Skeleton className="h-10 sm:h-12 w-3/4 max-w-xl" />
           <Skeleton className="mt-3 h-4 w-52" />
         </div>
-        <Skeleton className="h-16 w-56 rounded-2xl shrink-0" />
+        <Skeleton className="h-16 w-full sm:w-56 rounded-2xl shrink-0" />
       </div>
 
       {/* Hero image */}
-      <Skeleton className="mb-12 h-96 sm:h-[460px] w-full rounded-2xl" />
+      <Skeleton className="mb-8 lg:mb-12 h-56 sm:h-80 lg:h-[460px] w-full rounded-2xl" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
         {/* Main content */}
-        <div className="lg:col-span-7 space-y-10">
-          <CardSkeleton lines={6} className="rounded-2xl p-7" />
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="lg:col-span-7 min-w-0 space-y-8 lg:space-y-10">
+          <CardSkeleton lines={6} className="rounded-2xl p-5 sm:p-7" />
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
             <Skeleton className="h-4 w-24 mb-2 rounded-full" />
-            <Skeleton className="h-7 w-72 mb-6" />
-            <Skeleton className="h-[400px] w-full rounded-xl" />
+            <Skeleton className="h-7 w-full max-w-72 mb-6" />
+            <Skeleton className="h-[260px] sm:h-[340px] lg:h-[400px] w-full rounded-xl" />
           </div>
         </div>
 
         {/* Booking sidebar */}
-        <div className="lg:col-span-5">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-6">
+        <div className="lg:col-span-5 min-w-0">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xl space-y-6">
             <div>
               <Skeleton className="h-3 w-24" />
-              <Skeleton className="mt-2 h-7 w-60" />
+              <Skeleton className="mt-2 h-7 w-full max-w-60" />
               <Skeleton className="mt-2 h-3 w-full" />
             </div>
             <Skeleton className="h-28 w-full rounded-xl" />
@@ -84,7 +84,7 @@ const PackageDetailSkeleton = () => (
             </div>
             <div className="space-y-3">
               <Skeleton className="h-10 w-full" />
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
@@ -393,7 +393,7 @@ export const PackageDetailPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10">
+    <div className="min-h-screen bg-slate-50 py-6 sm:py-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         {/* Navigation Breadcrumb */}
         <Link
@@ -407,7 +407,7 @@ export const PackageDetailPage = () => {
         {cancelledRef && (
           <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">
             <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-            <p className="flex-1">
+            <p className="flex-1 min-w-0 break-words">
               Checkout for booking {cancelledRef} was not completed — no payment was charged. The reserved seats are released automatically when the checkout session expires.
             </p>
             <button
@@ -422,8 +422,8 @@ export const PackageDetailPage = () => {
         )}
 
         {/* Title Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 mb-2">
               <Badge className="bg-emerald-600 text-white font-bold text-xs">
                 {pkg.category}
@@ -444,26 +444,26 @@ export const PackageDetailPage = () => {
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 font-heading">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 font-heading break-words">
               {pkg.name}
             </h1>
 
             <p className="mt-2 text-sm text-slate-600 flex items-center gap-1.5 font-medium">
-              <MapPin className="h-4 w-4 text-emerald-600" />
+              <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
               {pkg.destination?.name || 'Philippines'}, {pkg.destination?.region}
             </p>
           </div>
 
-          <div className="flex flex-col items-end bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm shrink-0">
+          <div className="flex flex-col items-start sm:items-end self-start md:self-auto max-w-full bg-white px-4 sm:px-5 py-3 rounded-2xl border border-slate-200 shadow-sm shrink-0">
             {hasDiscount ? (
               <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-emerald-700 font-heading">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-2xl sm:text-3xl font-black text-emerald-700 font-heading">
                     {formatCurrency(unitPrice)}
                   </span>
                   <span className="text-xs text-slate-400">/ person (PHP)</span>
                 </div>
-                <div className="flex items-center justify-end gap-2 mt-0.5">
+                <div className="flex items-center sm:justify-end gap-2 mt-0.5">
                   <span className="text-xs text-slate-400 line-through">
                     {formatCurrency(originalUnitPrice)}
                   </span>
@@ -473,9 +473,9 @@ export const PackageDetailPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-baseline gap-2">
+              <div className="flex flex-wrap items-baseline gap-x-2">
                 <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Price</span>
-                <span className="text-3xl font-black text-slate-900 font-heading">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">
                   {formatCurrency(originalUnitPrice)}
                 </span>
                 <span className="text-xs text-slate-400">/ person (PHP)</span>
@@ -485,8 +485,8 @@ export const PackageDetailPage = () => {
         </div>
 
         {/* Hero Image Showcase */}
-        <div className="mb-12">
-          <div className="relative h-96 sm:h-[460px] w-full overflow-hidden rounded-2xl shadow-lg border border-slate-200">
+        <div className="mb-8 lg:mb-12">
+          <div className="relative h-56 sm:h-80 lg:h-[460px] w-full overflow-hidden rounded-2xl shadow-lg border border-slate-200">
             <img
               src={images[activeImageIndex]}
               alt={pkg.name}
@@ -503,7 +503,7 @@ export const PackageDetailPage = () => {
                   onClick={() => setActiveImageIndex(i)}
                   aria-label={`Show image ${i + 1} of ${images.length}`}
                   aria-pressed={activeImageIndex === i}
-                  className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-xl border-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                  className={`relative h-16 w-24 sm:h-20 sm:w-28 shrink-0 overflow-hidden rounded-xl border-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     activeImageIndex === i ? 'border-emerald-600 ring-2 ring-emerald-500/30' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
@@ -515,15 +515,15 @@ export const PackageDetailPage = () => {
         </div>
 
         {/* Content Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
           {/* Main Package Information (8 Cols) */}
-          <div className="lg:col-span-7 space-y-10">
+          <div className="lg:col-span-7 min-w-0 space-y-8 lg:space-y-10">
             {/* Overview */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-              <h2 className="text-2xl font-bold text-slate-900 font-heading mb-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-heading mb-4">
                 Tour Overview
               </h2>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-line text-base">
+              <p className="text-slate-700 leading-relaxed whitespace-pre-line break-words text-sm sm:text-base">
                 {pkg.description}
               </p>
 
@@ -584,13 +584,13 @@ export const PackageDetailPage = () => {
             </div>
 
             {/* DAY-BY-DAY ACTIVITY ITINERARY & LEAFLET MAP */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-1">
                     Activity Route
                   </Badge>
-                  <h2 className="text-2xl font-bold text-slate-900 font-heading">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-heading">
                     Day-by-Day Activity Itinerary
                   </h2>
                 </div>
@@ -598,7 +598,7 @@ export const PackageDetailPage = () => {
 
               {/* Interactive Route Map */}
               <div className="mb-8">
-                <ItineraryMap itinerary={pkg.itinerary} height="400px" />
+                <ItineraryMap itinerary={pkg.itinerary} height="clamp(260px, 60vw, 400px)" />
                 <p className="text-xs text-slate-400 mt-2 text-center">
                   *Click any numbered marker on the map to preview activity details.
                 </p>
@@ -607,27 +607,27 @@ export const PackageDetailPage = () => {
               {/* Day Breakdown List */}
               <div className="space-y-6">
                 {(pkg.itinerary || []).map((day) => (
-                  <div key={day.dayNumber} className="rounded-xl border border-slate-200 bg-slate-50/50 p-5">
+                  <div key={day.dayNumber} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5">
                     <div className="flex items-center gap-3 mb-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs">
                         D{day.dayNumber}
                       </span>
-                      <h3 className="font-bold text-slate-900 text-base font-heading">
+                      <h3 className="min-w-0 break-words font-bold text-slate-900 text-base font-heading">
                         {day.dayTitle}
                       </h3>
                     </div>
 
-                    <div className="space-y-3 pl-11">
+                    <div className="space-y-3 pl-0 sm:pl-11">
                       {(day.activities || []).map((act, aIdx) => (
                         <div key={aIdx} className="border-l-2 border-emerald-400 pl-3.5 py-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="shrink-0 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded">
                               {act.timeSlot}
                             </span>
-                            <h4 className="font-bold text-slate-800 text-sm">{act.activityName}</h4>
+                            <h4 className="min-w-0 break-words font-bold text-slate-800 text-sm">{act.activityName}</h4>
                           </div>
-                          <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-slate-400" />
+                          <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-start gap-1 break-words">
+                            <MapPin className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
                             {act.locationName}
                           </p>
                           {act.description && (
@@ -647,7 +647,7 @@ export const PackageDetailPage = () => {
                 <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-1">
                   Availability & Forecast
                 </Badge>
-                <h2 className="text-2xl font-bold text-slate-900 font-heading">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-heading">
                   Departure & Weather Calendar
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
@@ -664,13 +664,13 @@ export const PackageDetailPage = () => {
             </div>
 
             {/* CUSTOMER REVIEWS & RATINGS */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
                 <div>
                   <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold mb-1">
                     Verified Feedback
                   </Badge>
-                  <h2 className="text-2xl font-bold text-slate-900 font-heading">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-heading">
                     Customer Reviews & Ratings
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -679,7 +679,7 @@ export const PackageDetailPage = () => {
                 </div>
 
                 {reviewsData.totalReviews > 0 && (
-                  <div className="flex items-center gap-3 bg-amber-50/70 border border-amber-200/60 px-4 py-2.5 rounded-xl shrink-0">
+                  <div className="flex items-center gap-3 self-start sm:self-auto bg-amber-50/70 border border-amber-200/60 px-4 py-2.5 rounded-xl shrink-0">
                     <div className="text-center">
                       <div className="text-2xl font-black text-amber-700 font-heading leading-tight">
                         {(Number(reviewsData.averageRating) || 0).toFixed(1)}
@@ -754,12 +754,12 @@ export const PackageDetailPage = () => {
                   {reviewsData.reviews.map((rev) => (
                     <div key={rev.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/40">
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="h-8 w-8 shrink-0 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center">
                             {rev.customerName?.charAt(0)?.toUpperCase() || 'T'}
                           </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-800 block">
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-slate-800 block truncate">
                               {rev.customerName || 'Verified Traveler'}
                             </span>
                             <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-0.5">
@@ -768,7 +768,7 @@ export const PackageDetailPage = () => {
                           </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           <div className="flex items-center gap-0.5 justify-end">
                             {[1, 2, 3, 4, 5].map((s) => (
                               <Star
@@ -786,7 +786,7 @@ export const PackageDetailPage = () => {
                       </div>
 
                       {rev.comment && (
-                        <p className="text-xs text-slate-700 leading-relaxed mt-2 pl-10">
+                        <p className="text-xs text-slate-700 leading-relaxed mt-2 pl-0 sm:pl-10 break-words">
                           "{rev.comment}"
                         </p>
                       )}
@@ -798,13 +798,13 @@ export const PackageDetailPage = () => {
           </div>
 
           {/* Sticky Booking Form Drawer (5 Cols) */}
-          <div className="lg:col-span-5">
-            <div className="sticky top-28 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-6">
+          <div className="lg:col-span-5 min-w-0">
+            <div className="lg:sticky lg:top-28 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xl space-y-6">
               <div>
                 <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
                   Book This Tour
                 </span>
-                <h3 className="text-2xl font-black text-slate-900 font-heading mt-1">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading mt-1">
                   Secure Your Departure
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
@@ -831,8 +831,8 @@ export const PackageDetailPage = () => {
                         ? 'border-red-200 bg-red-50/50'
                         : 'border-emerald-200 bg-emerald-50/50'
                     }`}>
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <p className="text-xs font-bold text-slate-900">
                             {formatDate(selectedDeparture.departureDate)} to {formatDate(selectedDeparture.returnDate)}
                           </p>
@@ -844,8 +844,8 @@ export const PackageDetailPage = () => {
                         </div>
                         <Badge className={
                           selectedDeparture.isDeadlinePassed
-                            ? 'bg-red-600 text-white text-[10px]'
-                            : 'bg-emerald-600 text-white text-[10px]'
+                            ? 'shrink-0 bg-red-600 text-white text-[10px]'
+                            : 'shrink-0 bg-emerald-600 text-white text-[10px]'
                         }>
                           {selectedDeparture.isDeadlinePassed ? 'Deadline Passed' : 'Selected'}
                         </Badge>
@@ -859,7 +859,7 @@ export const PackageDetailPage = () => {
                         </div>
                         <div className="flex items-start gap-1.5">
                           <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                          <span className="leading-snug">
+                          <span className="leading-snug min-w-0 break-words">
                             Meeting Point: <strong>{selectedDeparture.meetingPoint || 'Designated Harbor / Meeting Terminal'}</strong>
                           </span>
                         </div>
@@ -887,7 +887,7 @@ export const PackageDetailPage = () => {
 
                 {/* 2. Number of Travelers */}
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
+                  <div className="flex justify-between items-center gap-2 mb-1.5">
                     <Label id="travelers-count-label" className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Number of Travelers
                     </Label>
@@ -902,7 +902,7 @@ export const PackageDetailPage = () => {
                       size="icon"
                       onClick={() => changeTravelers(Math.max(1, numberOfTravelers - 1))}
                       aria-label="Decrease number of travelers"
-                      className="bg-slate-50 font-bold text-slate-700 shadow-none"
+                      className="h-11 w-11 sm:h-10 sm:w-10 bg-slate-50 font-bold text-slate-700 shadow-none"
                     >
                       -
                     </Button>
@@ -919,7 +919,7 @@ export const PackageDetailPage = () => {
                         )
                       }
                       aria-label="Increase number of travelers"
-                      className="bg-slate-50 font-bold text-slate-700 shadow-none"
+                      className="h-11 w-11 sm:h-10 sm:w-10 bg-slate-50 font-bold text-slate-700 shadow-none"
                     >
                       +
                     </Button>
@@ -934,7 +934,7 @@ export const PackageDetailPage = () => {
                     </Label>
                     <div className="space-y-1.5">
                       {savedCoTravelers.map((ct) => (
-                        <div key={ct.id} className="flex items-center gap-2">
+                        <div key={ct.id} className="flex items-center gap-2 min-h-8">
                           <Checkbox
                             id={`cotraveler-${ct.id}`}
                             checked={selectedCoTravelerIds.includes(ct.id)}
@@ -942,9 +942,9 @@ export const PackageDetailPage = () => {
                           />
                           <label
                             htmlFor={`cotraveler-${ct.id}`}
-                            className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-slate-900"
+                            className="flex min-w-0 flex-wrap items-center gap-x-2 text-xs text-slate-700 cursor-pointer hover:text-slate-900"
                           >
-                            <span className="font-semibold">{ct.fullName}</span>
+                            <span className="font-semibold break-words">{ct.fullName}</span>
                             <span className="text-slate-400">({ct.relationship})</span>
                           </label>
                         </div>
@@ -970,8 +970,8 @@ export const PackageDetailPage = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="min-w-0">
                       <Label htmlFor="booking-email" className="text-xs font-semibold text-slate-600">
                         Email Address <span className="text-red-600" aria-hidden="true">*</span>
                       </Label>
@@ -985,7 +985,7 @@ export const PackageDetailPage = () => {
                         className="mt-1 text-xs"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <Label htmlFor="booking-phone" className="text-xs font-semibold text-slate-600">
                         Phone Number <span className="text-red-600" aria-hidden="true">*</span>
                       </Label>
@@ -1020,41 +1020,41 @@ export const PackageDetailPage = () => {
                 <div className="space-y-2 text-xs">
                   {hasDiscount ? (
                     <>
-                      <div className="flex justify-between text-slate-500">
+                      <div className="flex justify-between gap-3 text-slate-500">
                         <span>
                           Standard Rate: {formatCurrency(originalUnitPrice)} × {numberOfTravelers}
                         </span>
-                        <span className="line-through">{formatCurrency(originalTotalPrice)}</span>
+                        <span className="line-through shrink-0">{formatCurrency(originalTotalPrice)}</span>
                       </div>
-                      <div className="flex justify-between text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/60">
+                      <div className="flex justify-between gap-3 text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/60">
                         <span className="flex items-center gap-1">
                           <Percent className="h-3.5 w-3.5" />
                           Direct Discount ({discountPercent}% OFF)
                         </span>
-                        <span>- {formatCurrency(totalSavings)}</span>
+                        <span className="shrink-0">- {formatCurrency(totalSavings)}</span>
                       </div>
-                      <div className="flex justify-between text-slate-700 font-medium pt-0.5">
+                      <div className="flex justify-between gap-3 text-slate-700 font-medium pt-0.5">
                         <span>
                           Discounted Rate: {formatCurrency(unitPrice)} × {numberOfTravelers}
                         </span>
-                        <span className="font-bold text-slate-900">{formatCurrency(totalPrice)}</span>
+                        <span className="shrink-0 font-bold text-slate-900">{formatCurrency(totalPrice)}</span>
                       </div>
                     </>
                   ) : (
-                    <div className="flex justify-between text-slate-600">
+                    <div className="flex justify-between gap-3 text-slate-600">
                       <span>
                         {formatCurrency(originalUnitPrice)} × {numberOfTravelers} traveler(s)
                       </span>
-                      <span className="font-bold text-slate-900">{formatCurrency(totalPrice)}</span>
+                      <span className="shrink-0 font-bold text-slate-900">{formatCurrency(totalPrice)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between gap-3 text-slate-500">
                     <span>Environmental & Permit Fees</span>
                     <span className="text-emerald-700 font-semibold">Included</span>
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-slate-100 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 pt-2 border-t border-slate-100 text-sm">
                     <span className="font-bold text-slate-900">Total Price (PHP)</span>
-                    <span className="text-2xl font-black text-slate-900 font-heading">
+                    <span className="text-xl sm:text-2xl font-black text-slate-900 font-heading">
                       {formatCurrency(totalPrice)}
                     </span>
                   </div>
@@ -1064,7 +1064,7 @@ export const PackageDetailPage = () => {
                 <Button
                   type="submit"
                   disabled={submittingBooking || !selectedDeparture || selectedDeparture.status !== 'open' || selectedDeparture.isDeadlinePassed || selectedDeparture.remainingSlots <= 0}
-                  className="w-full h-12 font-bold text-base rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none"
+                  className="w-full h-auto min-h-12 py-3 whitespace-normal text-center font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none"
                 >
                   {submittingBooking ? (
                     <>
@@ -1082,12 +1082,12 @@ export const PackageDetailPage = () => {
                 </Button>
 
                 {/* Trust Badges */}
-                <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400 pt-1">
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-[11px] text-slate-400 pt-1">
                   <span className="flex items-center gap-1">
-                    <Shield className="h-3.5 w-3.5 text-emerald-600" />
+                    <Shield className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                     Stripe 256-bit Encryption
                   </span>
-                  <span>•</span>
+                  <span className="hidden sm:inline" aria-hidden="true">•</span>
                   <span>Free cancellation until {pkg.cancellationCutoffDays || 7} days prior</span>
                 </div>
               </form>

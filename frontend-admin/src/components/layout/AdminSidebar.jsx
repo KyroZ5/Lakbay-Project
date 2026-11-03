@@ -188,7 +188,7 @@ const SidebarPanel = ({ onNavigate }) => {
                       onClick={onNavigate}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium lg:min-h-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                           isActive
                             ? 'bg-emerald-50 text-emerald-700 font-semibold shadow-xs'
                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -196,7 +196,7 @@ const SidebarPanel = ({ onNavigate }) => {
                       }
                     >
                       <Icon className="h-4 w-4 shrink-0" />
-                      <span>{item.name}</span>
+                      <span className="truncate">{item.name}</span>
                     </NavLink>
                   );
                 })}
@@ -310,11 +310,11 @@ export const AdminMobileNav = () => {
           onClick={() => setOpen(true)}
           aria-label="Open navigation menu"
           aria-expanded={open}
-          className="-ml-2 text-slate-700"
+          className="-ml-2 h-10 w-10 text-slate-700"
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <SheetContent side="left" className="flex w-64 max-w-[85vw] flex-col gap-0 p-0 sm:max-w-[85vw]">
+        <SheetContent side="left" className="flex w-72 max-w-[85vw] flex-col gap-0 overflow-hidden p-0 sm:max-w-[85vw]">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SheetDescription className="sr-only">Lakbay staff portal sections</SheetDescription>
           <SidebarPanel onNavigate={() => setOpen(false)} />

@@ -60,11 +60,11 @@ export const DashboardOverviewPage = () => {
   const showSkeleton = loading && !data;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Page Title & Action Bar */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-heading">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 font-heading break-words sm:text-2xl">
             {role === 'operator'
               ? `${profile?.agencyName || 'Tour Operator'} Dashboard`
               : 'Operations & Financial Overview'}
@@ -75,13 +75,13 @@ export const DashboardOverviewPage = () => {
               : 'Real-time Philippine travel booking volume, verified revenue, and departure schedules.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={fetchMetrics}
             disabled={loading}
-            className="flex items-center gap-1.5 text-xs text-slate-600"
+            className="flex h-10 w-full items-center justify-center gap-1.5 text-xs text-slate-600 sm:h-9 sm:w-auto"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh Metrics
@@ -105,9 +105,9 @@ export const DashboardOverviewPage = () => {
             <CardSkeleton lines={5} />
             <CardSkeleton lines={5} className="lg:col-span-2" />
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" aria-hidden="true">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-hidden="true">
             <Skeleton className="mb-4 h-4 w-48" />
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="rounded-lg border border-slate-100 bg-slate-50 p-4">
                   <Skeleton className="h-3 w-20" />
@@ -124,7 +124,7 @@ export const DashboardOverviewPage = () => {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Collected Revenue */}
         <Card className="border-slate-200 shadow-sm bg-gradient-to-br from-white to-emerald-50/40">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Verified Revenue
             </CardTitle>
@@ -133,11 +133,11 @@ export const DashboardOverviewPage = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-slate-900">
+            <div className="text-2xl font-extrabold text-slate-900 break-words">
               {formatPHP(summary.collectedRevenue || summary.totalRevenue || 0)}
             </div>
             <p className="mt-1 text-xs text-emerald-700 flex items-center gap-1 font-medium">
-              <TrendingUp className="h-3.5 w-3.5" />
+              <TrendingUp className="h-3.5 w-3.5 shrink-0" />
               Excludes unpaid and cancelled bookings
             </p>
           </CardContent>
@@ -145,7 +145,7 @@ export const DashboardOverviewPage = () => {
 
         {/* Total Bookings / Booked Travelers */}
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {role === 'operator' ? 'Booked Travelers' : 'Total Reservations'}
             </CardTitle>
@@ -154,12 +154,12 @@ export const DashboardOverviewPage = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-slate-900">
+            <div className="text-2xl font-extrabold text-slate-900 break-words">
               {role === 'operator'
                 ? summary.totalBookedTravelers || 0
                 : summary.totalBookings || 0}
             </div>
-            <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
               {role === 'operator' ? (
                 <span className="font-semibold text-emerald-600">On your active departures</span>
               ) : (
@@ -175,7 +175,7 @@ export const DashboardOverviewPage = () => {
 
         {/* Upcoming Open Departures */}
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Active Departures
             </CardTitle>
@@ -184,7 +184,7 @@ export const DashboardOverviewPage = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-slate-900">
+            <div className="text-2xl font-extrabold text-slate-900 break-words">
               {summary.upcomingDeparturesCount || summary.activeDeparturesCount || 0}
             </div>
             <p className="mt-1 text-xs text-slate-500">
@@ -195,7 +195,7 @@ export const DashboardOverviewPage = () => {
 
         {/* Registered Customers / Tour Packages */}
         <Card className="border-slate-200 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {role === 'operator' ? 'Agency Tour Packages' : 'Registered Travelers'}
             </CardTitle>
@@ -204,7 +204,7 @@ export const DashboardOverviewPage = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold text-slate-900">
+            <div className="text-2xl font-extrabold text-slate-900 break-words">
               {role === 'operator'
                 ? summary.totalPackages || 0
                 : summary.totalCustomers || 0}
@@ -269,8 +269,8 @@ export const DashboardOverviewPage = () => {
         </Card>
 
         <Card className="border-slate-200 shadow-sm lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
+          <CardHeader className="flex flex-col gap-2 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-1.5">
               <CardTitle className="text-base font-bold text-slate-900">
                 Recent Reservations
               </CardTitle>
@@ -278,7 +278,7 @@ export const DashboardOverviewPage = () => {
                 Latest bookings on your tour packages
               </CardDescription>
             </div>
-            <Button asChild variant="ghost" size="sm" className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+            <Button asChild variant="ghost" size="sm" className="self-start text-xs text-emerald-600 hover:text-emerald-700 flex shrink-0 items-center gap-1 sm:self-auto">
               <Link to="/operations/bookings">
                 View Bookings <ArrowRight className="h-3 w-3" />
               </Link>
@@ -297,18 +297,18 @@ export const DashboardOverviewPage = () => {
                 {data.recentBookings.map((b) => (
                   <div
                     key={b.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3"
+                    className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-slate-50/50 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 w-full sm:w-auto">
                       <div className="text-sm font-semibold text-slate-800 truncate">
                         {b.packageName || 'Tour Package'}
                       </div>
-                      <div className="text-xs text-slate-500 truncate">
+                      <div className="text-xs text-slate-500 break-words sm:truncate">
                         {b.bookingReference || b.id} &bull; {b.customerName || 'Traveler'} &bull;{' '}
                         {b.numberOfTravelers || 1} pax &bull; Departs {b.departureDate || 'N/A'}
                       </div>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
+                    <div className="flex shrink-0 flex-row flex-wrap items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
                       <span className="text-sm font-bold text-slate-900">{formatPHP(b.totalPrice)}</span>
                       <Badge variant="outline" className="bg-white text-[10px] font-semibold text-slate-700">
                         {b.bookingStatus || 'Pending'} / {b.paymentStatus || 'Unpaid'}
@@ -381,8 +381,8 @@ export const DashboardOverviewPage = () => {
 
         {/* Top Tour Packages */}
         <Card className="border-slate-200 shadow-sm lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
+          <CardHeader className="flex flex-col gap-2 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-1.5">
               <CardTitle className="text-base font-bold text-slate-900">
                 Most Popular Tour Packages
               </CardTitle>
@@ -390,7 +390,7 @@ export const DashboardOverviewPage = () => {
                 Ranked by total booked passenger headcount
               </CardDescription>
             </div>
-            <Button asChild variant="ghost" size="sm" className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+            <Button asChild variant="ghost" size="sm" className="self-start text-xs text-emerald-600 hover:text-emerald-700 flex shrink-0 items-center gap-1 sm:self-auto">
               <Link to="/catalog/packages">
                 View Packages <ArrowRight className="h-3 w-3" />
               </Link>
@@ -409,17 +409,17 @@ export const DashboardOverviewPage = () => {
                 {charts.topPackages.map((pkg, idx) => (
                   <div
                     key={pkg.name}
-                    className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
                         {idx + 1}
                       </span>
-                      <span className="text-sm font-semibold text-slate-800">
+                      <span className="min-w-0 break-words text-sm font-semibold text-slate-800">
                         {pkg.name}
                       </span>
                     </div>
-                    <Badge variant="outline" className="font-semibold bg-white text-slate-700">
+                    <Badge variant="outline" className="shrink-0 whitespace-nowrap font-semibold bg-white text-slate-700">
                       {pkg.travelers} traveler{pkg.travelers === 1 ? '' : 's'}
                     </Badge>
                   </div>
@@ -431,11 +431,11 @@ export const DashboardOverviewPage = () => {
       </div>
 
       {/* Catalog Quick Stats */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">
           Catalog Inventory Summary
         </h3>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <div className="rounded-lg bg-slate-50 p-4 border border-slate-100">
             <span className="text-xs font-medium text-slate-500">Destinations</span>
             <div className="text-xl font-bold text-slate-900 mt-1">

@@ -29,7 +29,7 @@ export const DestinationMap = ({
   const lng = coordinates?.lng || 119.4075;
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-slate-200 shadow-sm relative z-10 ${className}`} style={{ height }}>
+    <div className={`w-full max-h-[60vh] min-h-[240px] overflow-hidden rounded-xl border border-slate-200 shadow-sm relative z-10 ${className}`} style={{ height }}>
       <MapContainer
         center={[lat, lng]}
         zoom={11}

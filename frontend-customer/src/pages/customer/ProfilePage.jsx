@@ -66,10 +66,10 @@ export const ProfilePage = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-6 sm:space-y-8 max-w-3xl min-w-0">
       <div>
         <div className="mb-2 h-1.5 w-14 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-        <h1 className="text-3xl font-black text-slate-900 font-heading">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">
           Profile & Security
         </h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -79,7 +79,7 @@ export const ProfilePage = () => {
 
       {/* Profile Form */}
       <Card className="rounded-2xl border-slate-200 shadow-sm">
-        <CardContent className="p-7">
+        <CardContent className="p-5 sm:p-7">
           <form onSubmit={handleProfileSave} className="space-y-5">
             <h3 className="text-lg font-bold text-slate-900 font-heading mb-4 flex items-center gap-2">
               <User className="h-5 w-5 text-emerald-600" />
@@ -97,6 +97,7 @@ export const ProfilePage = () => {
               />
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <Label htmlFor="profile-full-name" className="text-xs font-semibold text-slate-700">
                 Full Name <span className="text-red-600" aria-hidden="true">*</span>
@@ -124,6 +125,7 @@ export const ProfilePage = () => {
                 className="mt-1"
               />
             </div>
+            </div>
 
             <div>
               <Label htmlFor="profile-emergency" className="text-xs font-semibold text-slate-700">Emergency Contact (Name & Number)</Label>
@@ -144,7 +146,7 @@ export const ProfilePage = () => {
             <Button
               type="submit"
               disabled={saving}
-              className="font-bold text-xs h-10 px-6"
+              className="w-full sm:w-auto font-bold text-xs h-10 px-6"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
               Save Changes
@@ -155,7 +157,7 @@ export const ProfilePage = () => {
 
       {/* Danger Zone: Deactivate Account */}
       <Card className="rounded-2xl border-red-100 bg-red-50/20 shadow-sm">
-        <CardContent className="p-7">
+        <CardContent className="p-5 sm:p-7">
           <h3 className="text-lg font-bold text-red-900 font-heading mb-2 flex items-center gap-2">
             <Shield className="h-5 w-5 text-red-600" />
             Deactivate Account
@@ -168,7 +170,7 @@ export const ProfilePage = () => {
             variant="destructive"
             onClick={() => setDeactivateOpen(true)}
             disabled={deactivating}
-            className="text-xs font-bold"
+            className="w-full sm:w-auto h-10 text-xs font-bold"
           >
             {deactivating ? 'Verifying Bookings...' : 'Deactivate My Account'}
           </Button>

@@ -269,23 +269,83 @@ export const DeparturesManagePage = () => {
   };
   // Skeleton only on initial load; refreshes keep the current rows visible
   const showSkeleton = loading && departures.length === 0;
+  const hasRows = !showSkeleton && filtered.length > 0;
+  const getRowInfo = (dep) => {
+    const pkg = packages.find((p) => p.id === dep.packageId) || dep.package;
+    const guide = guides.find((g) => g.uid === dep.assignedGuideId || g.id === dep.assignedGuideId) ||
+      (dep.assignedGuideId && dep.assignedGuideName && dep.assignedGuideName !== 'Unassigned'
+        ? { fullName: dep.assignedGuideName }
+        : null);
+    const booked = dep.bookedCount || 0;
+    const capacity = dep.capacity || 15;
+    const pct = Math.min(100, Math.round((booked / capacity) * 100));
+    return { pkg, guide, booked, capacity, pct };
+  };
+
+  const statusVariant = (dep) =>
+    displayStatus(dep) === 'open'
+      ? 'success'
+      : displayStatus(dep) === 'full'
+      ? 'warning'
+      : dep.status === 'completed'
+      ? 'info'
+      : 'destructive';
+
+  const renderRowActions = (dep, mobile = false) => (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openEditModal(dep)}
+            aria-label={`Edit departure on ${dep.departureDate}`}
+            className={`${mobile ? 'h-10 w-10' : 'h-8 w-8'} p-0 text-slate-600 hover:text-emerald-600`}
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Edit Departure</TooltipContent>
+      </Tooltip>
+      {dep.status !== 'cancelled' && dep.status !== 'completed' && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setCancellingDeparture(dep);
+                setCancelReason('');
+              }}
+              aria-label={`Cancel departure on ${dep.departureDate}`}
+              className={`${mobile ? 'h-10 w-10' : 'h-8 w-8'} p-0 text-slate-600 hover:text-red-600`}
+            >
+              <XCircle className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Cancel Departure</TooltipContent>
+        </Tooltip>
+      )}
+    </>
+  );
+
   const cancellingPackageName =
     (packages.find((p) => p.id === cancellingDeparture?.packageId) || cancellingDeparture?.package)?.name;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 break-words sm:text-2xl">
             Departure Schedules & Slots
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Schedule future tour departures, assign certified guides, and monitor capacity utilization.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={openCreateModal} className="font-medium flex items-center gap-1.5 shadow-sm">
+        <div className="flex shrink-0 items-center gap-3">
+          <Button onClick={openCreateModal} className="h-10 w-full font-medium flex items-center justify-center gap-1.5 shadow-sm sm:w-auto">
             <Plus className="h-4 w-4" />
             Schedule Departure
           </Button>
@@ -293,13 +353,13 @@ export const DeparturesManagePage = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
             value={packageFilter || 'all'}
             onValueChange={(v) => setPackageFilter(v === 'all' ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by tour package" className="w-auto min-w-[200px] text-slate-700">
+            <SelectTrigger aria-label="Filter by tour package" className="w-full text-slate-700 sm:w-auto sm:min-w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -316,7 +376,7 @@ export const DeparturesManagePage = () => {
             value={statusFilter || 'all'}
             onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by status" className="w-auto min-w-[200px] text-slate-700">
+            <SelectTrigger aria-label="Filter by status" className="w-full text-slate-700 sm:w-auto sm:min-w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -337,7 +397,7 @@ export const DeparturesManagePage = () => {
               onClick={fetchData}
               disabled={loading}
               aria-label="Refresh departure schedules"
-              className="text-slate-500 hover:text-slate-800"
+              className="h-10 w-10 self-end p-0 text-slate-500 hover:text-slate-800 sm:self-auto"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
@@ -349,8 +409,11 @@ export const DeparturesManagePage = () => {
       {error && <ErrorState message={error} onRetry={fetchData} retrying={loading} />}
 
       {/* Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
-        <Table>
+      <div
+        className={`min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden ${hasRows ? 'hidden md:block' : ''}`}
+        aria-busy={loading}
+      >
+        <Table className={hasRows ? 'min-w-[900px]' : ''}>
           <TableHeader>
             <TableRow>
               <TableHead>Tour Package</TableHead>
@@ -393,14 +456,7 @@ export const DeparturesManagePage = () => {
               )
             ) : (
               filtered.map((dep) => {
-                const pkg = packages.find((p) => p.id === dep.packageId) || dep.package;
-                const guide = guides.find((g) => g.uid === dep.assignedGuideId || g.id === dep.assignedGuideId) ||
-                  (dep.assignedGuideId && dep.assignedGuideName && dep.assignedGuideName !== 'Unassigned'
-                    ? { fullName: dep.assignedGuideName }
-                    : null);
-                const booked = dep.bookedCount || 0;
-                const capacity = dep.capacity || 15;
-                const pct = Math.min(100, Math.round((booked / capacity) * 100));
+                const { pkg, guide, booked, capacity, pct } = getRowInfo(dep);
 
                 return (
                   <TableRow key={dep.id}>
@@ -411,7 +467,7 @@ export const DeparturesManagePage = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-slate-700">
-                      <div className="font-medium flex items-center gap-1.5">
+                      <div className="font-medium flex items-center gap-1.5 whitespace-nowrap">
                         <Calendar className="h-3.5 w-3.5 text-slate-400" />
                         {dep.departureDate}
                       </div>
@@ -468,15 +524,7 @@ export const DeparturesManagePage = () => {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          displayStatus(dep) === 'open'
-                            ? 'success'
-                            : displayStatus(dep) === 'full'
-                            ? 'warning'
-                            : dep.status === 'completed'
-                            ? 'info'
-                            : 'destructive'
-                        }
+                        variant={statusVariant(dep)}
                         className="capitalize text-xs font-semibold"
                       >
                         {displayStatus(dep)}
@@ -484,39 +532,7 @@ export const DeparturesManagePage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditModal(dep)}
-                              aria-label={`Edit departure on ${dep.departureDate}`}
-                              className="h-8 w-8 p-0 text-slate-600 hover:text-emerald-600"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit Departure</TooltipContent>
-                        </Tooltip>
-                        {dep.status !== 'cancelled' && dep.status !== 'completed' && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setCancellingDeparture(dep);
-                                  setCancelReason('');
-                                }}
-                                aria-label={`Cancel departure on ${dep.departureDate}`}
-                                className="h-8 w-8 p-0 text-slate-600 hover:text-red-600"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Cancel Departure</TooltipContent>
-                          </Tooltip>
-                        )}
+                        {renderRowActions(dep)}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -527,9 +543,87 @@ export const DeparturesManagePage = () => {
         </Table>
       </div>
 
+      {/* Mobile card list (table shown from md up) */}
+      {hasRows && (
+        <ul className="space-y-3 md:hidden" aria-busy={loading}>
+          {filtered.map((dep) => {
+            const { pkg, guide, booked, capacity, pct } = getRowInfo(dep);
+            return (
+              <li key={dep.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900 break-words">{pkg?.name || 'Tour Package'}</div>
+                    <div className="text-xs text-slate-400">{pkg?.durationDays || 1} Days Trip</div>
+                  </div>
+                  <Badge variant={statusVariant(dep)} className="shrink-0 capitalize text-xs font-semibold">
+                    {displayStatus(dep)}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-slate-700 min-[400px]:grid-cols-2">
+                  <div className="min-w-0">
+                    <div className="font-medium flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      {dep.departureDate}
+                    </div>
+                    <div className="text-xs text-slate-400">Until {dep.returnDate || dep.departureDate}</div>
+                    <div className="text-xs text-emerald-700 font-medium flex items-center gap-1 mt-0.5">
+                      <Clock className="h-3 w-3" />
+                      {dep.departureTime || '07:00 AM'}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-1 text-slate-800 text-xs font-medium">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                      <span className="break-words">{dep.meetingPoint || 'Designated Harbor / Terminal'}</span>
+                    </div>
+                    <div className="mt-1">
+                      {dep.isDeadlinePassed ? (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 font-normal">
+                          Cutoff Passed (Rule D)
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] text-slate-500">
+                          Cutoff: {dep.bookingDeadlineHours !== undefined ? dep.bookingDeadlineHours : 24}h prior
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-1">
+                  <div className="flex justify-between text-xs font-medium text-slate-600">
+                    <span>{booked} / {capacity} Booked</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${pct >= 100 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                  {guide ? (
+                    <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-slate-700">
+                      <UserCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                      <span className="truncate">{guide.fullName || guide.displayName}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">Unassigned</span>
+                  )}
+                  <div className="flex shrink-0 items-center gap-1">{renderRowActions(dep, true)}</div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       {/* Create / Edit Modal Dialog */}
       <Dialog open={isModalOpen} onOpenChange={(open) => !saving && setIsModalOpen(open)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editingDeparture ? 'Edit Departure Schedule' : 'Schedule New Departure'}
@@ -581,7 +675,7 @@ export const DeparturesManagePage = () => {
               <FieldError id="dep-pkg-error">{formErrors.packageId}</FieldError>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="dep-date" className="text-xs font-semibold">
                   Departure Date *
@@ -616,7 +710,7 @@ export const DeparturesManagePage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="dep-time" className="text-xs font-semibold">
                   Assembly / Departure Time *
@@ -669,7 +763,7 @@ export const DeparturesManagePage = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="dep-cap" className="text-xs font-semibold">
                   Total Capacity *

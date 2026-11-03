@@ -162,9 +162,9 @@ export const GuideManifestPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <Compass className="h-6 w-6 text-emerald-600" />
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <Compass className="h-6 w-6 shrink-0 text-emerald-600" />
             Tour Guide Operations & Manifest
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
@@ -176,7 +176,7 @@ export const GuideManifestPage = () => {
           size="sm"
           onClick={fetchDepartures}
           disabled={loading}
-          className="text-xs text-slate-600 flex items-center gap-1.5"
+          className="h-10 w-full shrink-0 text-xs text-slate-600 flex items-center justify-center gap-1.5 sm:w-auto md:h-9"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh Assignments
@@ -191,7 +191,7 @@ export const GuideManifestPage = () => {
         <LoadingRegion label="Loading assigned tour departures..." className="space-y-6">
           <div className="flex gap-3 overflow-hidden pb-2" aria-hidden="true">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="w-56 shrink-0 rounded-xl border border-slate-200 bg-white p-3.5">
+              <div key={i} className="w-56 max-w-[80vw] shrink-0 rounded-xl border border-slate-200 bg-white p-3.5">
                 <Skeleton className="h-3.5 w-36" />
                 <Skeleton className="mt-3 h-3 w-28" />
               </div>
@@ -213,7 +213,7 @@ export const GuideManifestPage = () => {
           </div>
         )
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex snap-x gap-3 overflow-x-auto pb-2">
           {assignedDepartures.map((dep) => {
             const isSelected = selectedDeparture?.id === dep.id;
             return (
@@ -222,14 +222,14 @@ export const GuideManifestPage = () => {
                 type="button"
                 onClick={() => selectDeparture(dep)}
                 aria-pressed={isSelected}
-                className={`flex shrink-0 cursor-pointer flex-col rounded-xl border p-3.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`flex min-h-[44px] w-64 max-w-[80vw] shrink-0 snap-start cursor-pointer flex-col rounded-xl border p-3.5 sm:w-auto sm:max-w-xs text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   isSelected
                     ? 'border-emerald-600 bg-emerald-50/60 shadow-sm ring-2 ring-emerald-500/20'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-xs font-bold text-slate-900">
+                <div className="flex w-full items-center justify-between gap-4">
+                  <span className="min-w-0 truncate text-xs font-bold text-slate-900">
                     {dep.package?.name || 'Tour Package'}
                   </span>
                   <Badge
@@ -240,7 +240,7 @@ export const GuideManifestPage = () => {
                         ? 'destructive'
                         : 'success'
                     }
-                    className="text-[10px] uppercase font-bold"
+                    className="shrink-0 text-[10px] uppercase font-bold"
                   >
                     {dep.status}
                   </Badge>
@@ -263,13 +263,13 @@ export const GuideManifestPage = () => {
       {selectedDeparture && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main Departure Card */}
-          <Card className="border-slate-200 shadow-sm lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-bold text-slate-900">
+          <Card className="min-w-0 border-slate-200 shadow-sm lg:col-span-2">
+            <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <CardTitle className="text-lg font-bold text-slate-900 break-words">
                   {selectedDeparture.package?.name}
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                <CardDescription className="text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
                   <span>Schedule: {selectedDeparture.departureDate} to {selectedDeparture.returnDate}</span>
                   <span>&bull;</span>
                   <span>{selectedDeparture.package?.durationDays || 1} Days Tour</span>
@@ -281,7 +281,7 @@ export const GuideManifestPage = () => {
                   onClick={() => setConfirmCompleteOpen(true)}
                   disabled={completing || !canComplete}
                   title={!canComplete ? 'Tour can be completed on or after its departure date' : undefined}
-                  className="font-semibold text-xs flex items-center gap-1.5 shadow-sm"
+                  className="h-11 w-full shrink-0 font-semibold text-sm sm:h-10 sm:w-auto sm:text-xs flex items-center justify-center gap-1.5 shadow-sm"
                 >
                   {completing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -295,7 +295,7 @@ export const GuideManifestPage = () => {
             <CardContent>
               {/* Headcount and Check-in Bar */}
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-semibold">
                   <span className="text-slate-600">Digital Roll-Call Progress</span>
                   <span className="text-emerald-700">
                     {manifestData?.checkedInHeadcount || 0} of {manifestData?.totalHeadcount || 0} Checked In
@@ -330,7 +330,7 @@ export const GuideManifestPage = () => {
             <CardContent>
               {weather ? (
                 <div className="space-y-2">
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex flex-wrap items-baseline gap-2">
                     <span className="text-3xl font-extrabold text-slate-900">
                       {weather.temp != null ? `${Math.round(weather.temp)}°C` : '--'}
                     </span>
@@ -367,9 +367,9 @@ export const GuideManifestPage = () => {
       {/* Passenger Manifest Table */}
       {selectedDeparture && (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-3.5 flex items-center justify-between">
+          <div className="border-b border-slate-200 bg-slate-50/50 px-4 py-3.5 sm:px-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Users className="h-4 w-4 text-emerald-600" />
+              <Users className="h-4 w-4 shrink-0 text-emerald-600" />
               Verified Passenger Manifest ({manifestData?.totalHeadcount || 0} Travelers)
             </h3>
             <span className="text-xs text-slate-500">
@@ -388,6 +388,94 @@ export const GuideManifestPage = () => {
             </div>
           )}
 
+          {/* Mobile: card-based roster with large tap targets (guides use this in the field) */}
+          <div className="md:hidden">
+            {showManifestSkeleton ? (
+              <ul className="divide-y divide-slate-100" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <li key={i} className="flex items-center gap-3 p-4">
+                    <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-4 w-40 max-w-full" />
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : !manifestData?.manifest || manifestData.manifest.length === 0 ? (
+              manifestError ? null : (
+                <EmptyState
+                  icon={Users}
+                  title="No passengers yet"
+                  description="No confirmed passenger reservations for this departure yet."
+                />
+              )
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {manifestData.manifest.map((item) => {
+                  const checkId = `checkin-m-${item.bookingId}-${item.travelerIndex}`;
+                  return (
+                    <li
+                      key={`${item.bookingId}-${item.travelerIndex}`}
+                      className={item.isCheckedIn ? 'bg-emerald-50/40' : ''}
+                    >
+                      {/* Whole card toggles the checkbox via the label (native label → button activation) */}
+                      <label
+                        htmlFor={checkId}
+                        className={`flex min-h-[64px] items-start gap-3 p-4 ${
+                          isClosedDeparture ? 'cursor-default' : 'cursor-pointer active:bg-slate-50'
+                        }`}
+                      >
+                        <Checkbox
+                          id={checkId}
+                          checked={Boolean(item.isCheckedIn)}
+                          disabled={isClosedDeparture}
+                          onCheckedChange={() => handleToggleCheckIn(item)}
+                          aria-label={`Check in ${item.fullName}`}
+                          className="mt-0.5 h-8 w-8 rounded-md [&_svg]:h-6 [&_svg]:w-6"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="break-words text-base font-semibold text-slate-900">
+                              {item.fullName}
+                            </span>
+                            {item.isCheckedIn && (
+                              <Badge variant="success" className="text-[10px] px-1.5 py-0">
+                                Boarded
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600">
+                            {item.relationship && <span>{item.relationship}</span>}
+                            {item.relationship && <span className="text-slate-300">&bull;</span>}
+                            <span className="font-mono font-semibold text-slate-800 break-all">
+                              {item.bookingReference}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-700">
+                            <Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            <span className="break-all">{item.contactPhone || 'N/A'}</span>
+                          </div>
+                          <div className="mt-2 text-xs">
+                            {item.dietaryOrMedicalNotes ? (
+                              <span className="inline-block max-w-full break-words font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                {item.dietaryOrMedicalNotes}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">None noted</span>
+                            )}
+                          </div>
+                        </div>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {/* Tablet and up: full table */}
+          <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -433,7 +521,7 @@ export const GuideManifestPage = () => {
                       />
                     </TableCell>
                     <TableCell className="font-semibold text-slate-900 text-sm">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span>{item.fullName}</span>
                         {item.isCheckedIn && (
                           <Badge variant="success" className="text-[9px] px-1.5 py-0">
@@ -448,15 +536,15 @@ export const GuideManifestPage = () => {
                     <TableCell className="font-mono text-xs font-semibold text-slate-800">
                       {item.bookingReference}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-700">
+                    <TableCell className="text-xs text-slate-700 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <Phone className="h-3 w-3 text-slate-400" />
                         <span>{item.contactPhone || 'N/A'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-xs min-w-[10rem]">
                       {item.dietaryOrMedicalNotes ? (
-                        <span className="font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        <span className="inline-block break-words font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                           {item.dietaryOrMedicalNotes}
                         </span>
                       ) : (
@@ -468,6 +556,7 @@ export const GuideManifestPage = () => {
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 

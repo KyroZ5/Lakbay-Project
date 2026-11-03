@@ -36,15 +36,15 @@ export const RoleRoute = ({ allowedRoles = [], children }) => {
   // If role is not in allowedRoles (admins always allowed everywhere)
   if (allowedRoles.length > 0 && !allowedRoles.includes(role) && role !== 'admin') {
     return (
-      <div className="flex h-[80vh] flex-col items-center justify-center text-center px-4">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center px-4">
         <div className="mb-4 rounded-full bg-red-100 p-4 text-red-600">
           <AlertTriangle className="h-10 w-10" aria-hidden="true" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-800">403 - Permission Denied</h2>
-        <p className="mt-2 max-w-md text-sm text-slate-500">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-800">403 - Permission Denied</h2>
+        <p className="mt-2 max-w-md text-sm text-slate-500 break-words">
           Your staff role (<strong>{role}</strong>) does not have access to view or manage this section.
         </p>
-        <div className="mt-6 flex gap-3">
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Button variant="outline" onClick={() => window.history.back()}>
             Go Back
           </Button>

@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   Select,
   SelectTrigger,
@@ -225,22 +226,128 @@ export const StaffCustomersPage = () => {
   const showSkeleton = loading && users.length === 0;
   const statusTargetIsActive = (statusTarget?.accountStatus || 'active') === 'active';
 
+  // Shared between desktop table rows and mobile cards
+  const renderRoleBadge = (u) => (
+    <Badge
+      variant={
+        u.role === 'admin'
+          ? 'destructive'
+          : u.role === 'coordinator'
+          ? 'info'
+          : u.role === 'guide'
+          ? 'success'
+          : u.role === 'support'
+          ? 'secondary'
+          : 'outline'
+      }
+      className="capitalize font-semibold text-xs"
+    >
+      {u.role || 'customer'}
+    </Badge>
+  );
+
+  const renderUserActions = (u, mobile = false) => {
+    const isSelf = (u.uid || u.id) === currentStaffUser?.uid;
+    const isActive = (u.accountStatus || 'active') === 'active';
+    const isOperator = u.role === 'operator';
+    const size = mobile ? 'h-10 w-10' : 'h-8 w-8';
+    return (
+      <>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isOperator}
+              onClick={() => {
+                setSelectedUserForRole(u);
+                setNewRole(u.role || 'customer');
+              }}
+              className={`${size} p-0 text-slate-600 hover:text-emerald-600`}
+              aria-label={`Change role for ${u.fullName || u.email}`}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{isOperator ? 'Manage operators from the Operators page' : 'Change Role'}</TooltipContent>
+        </Tooltip>
+        {isSelf ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* Focusable wrapper so the explanation is reachable while the button is disabled */}
+              <span
+                tabIndex={0}
+                className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled
+                  aria-label="Deactivate Account (unavailable for your own account)"
+                  className={`${size} p-0 text-slate-600`}
+                >
+                  <UserX className="h-4 w-4" />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>You cannot deactivate your own administrative account.</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => requestToggleStatus(u)}
+                className={`${size} p-0 ${
+                  isActive
+                    ? 'text-slate-600 hover:text-red-600'
+                    : 'text-slate-600 hover:text-emerald-600'
+                }`}
+                aria-label={`${isActive ? 'Deactivate' : 'Reactivate'} ${u.fullName || u.email}`}
+              >
+                {isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isActive ? 'Deactivate Account' : 'Reactivate Account'}</TooltipContent>
+          </Tooltip>
+        )}
+      </>
+    );
+  };
+
+  const emptyUsersState = hasFilters ? (
+    <EmptyState filtered onClearFilters={clearFilters} />
+  ) : (
+    <EmptyState
+      icon={Users}
+      title="No user accounts yet"
+      description="Provision a staff member to get started."
+      action={
+        <Button size="sm" onClick={openCreateModal}>
+          <UserPlus className="mr-1.5 h-4 w-4" />
+          Provision Staff Member
+        </Button>
+      }
+    />
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Identity & Access Management (IAM)
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Manage staff credentials, custom security claims, role permissions, and customer accounts.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 md:w-auto md:shrink-0">
           <Button
             onClick={openCreateModal}
-            className="font-medium flex items-center gap-1.5 shadow-sm"
+            className="h-10 w-full md:w-auto font-medium flex items-center justify-center gap-1.5 shadow-sm"
           >
             <UserPlus className="h-4 w-4" />
             Provision Staff Member
@@ -249,9 +356,9 @@ export const StaffCustomersPage = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div className="relative w-full md:max-w-sm md:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder="Search by name, email, phone..."
             aria-label="Search users"
@@ -261,12 +368,12 @@ export const StaffCustomersPage = () => {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 sm:flex sm:flex-wrap sm:gap-3">
           <Select
             value={roleFilter || 'all'}
             onValueChange={(v) => setRoleFilter(v === 'all' ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by role" className="w-40 text-slate-700">
+            <SelectTrigger aria-label="Filter by role" className="w-full min-w-0 sm:w-40 text-slate-700">
               <SelectValue placeholder="All Roles" />
             </SelectTrigger>
             <SelectContent>
@@ -284,7 +391,7 @@ export const StaffCustomersPage = () => {
             value={statusFilter || 'all'}
             onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by account status" className="w-40 text-slate-700">
+            <SelectTrigger aria-label="Filter by account status" className="w-full min-w-0 sm:w-40 text-slate-700">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -302,7 +409,7 @@ export const StaffCustomersPage = () => {
                 onClick={fetchUsers}
                 disabled={loading}
                 aria-label="Refresh users"
-                className="text-slate-500 hover:text-slate-800"
+                className="h-10 w-10 p-0 text-slate-500 hover:text-slate-800"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
@@ -316,6 +423,67 @@ export const StaffCustomersPage = () => {
 
       {/* Users Table */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
+        {/* Mobile: stacked user cards */}
+        <div className="md:hidden">
+          {showSkeleton ? (
+            <ul className="divide-y divide-slate-100" aria-hidden="true">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <li key={i} className="flex items-center gap-3 p-4">
+                  <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-36 max-w-full" />
+                    <Skeleton className="h-3 w-48 max-w-full" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : filtered.length === 0 ? (
+            error ? null : emptyUsersState
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {filtered.map((u) => {
+                const isSelf = (u.uid || u.id) === currentStaffUser?.uid;
+                const isActive = (u.accountStatus || 'active') === 'active';
+                return (
+                  <li key={u.id || u.uid} className="space-y-3 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700 text-xs border border-slate-200">
+                        {u.fullName?.charAt(0) || u.email?.charAt(0) || 'U'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900 text-sm flex flex-wrap items-center gap-1.5">
+                          <span className="break-words">{u.fullName || 'User'}</span>
+                          {isSelf && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">
+                              You
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500 break-all">{u.email}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center -mr-2 -mt-1">
+                        {renderUserActions(u, true)}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-12 text-xs text-slate-600">
+                      {renderRoleBadge(u)}
+                      <Badge
+                        variant={isActive ? 'success' : 'destructive'}
+                        className="text-xs font-medium"
+                      >
+                        {u.accountStatus || 'active'}
+                      </Badge>
+                      <span>{u.phone || 'N/A'}</span>
+                      <span className="text-slate-400">{(u.createdAt || '').substring(0, 10)}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -337,21 +505,7 @@ export const StaffCustomersPage = () => {
               error ? null : (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={6}>
-                    {hasFilters ? (
-                      <EmptyState filtered onClearFilters={clearFilters} />
-                    ) : (
-                      <EmptyState
-                        icon={Users}
-                        title="No user accounts yet"
-                        description="Provision a staff member to get started."
-                        action={
-                          <Button size="sm" onClick={openCreateModal}>
-                            <UserPlus className="mr-1.5 h-4 w-4" />
-                            Provision Staff Member
-                          </Button>
-                        }
-                      />
-                    )}
+                    {emptyUsersState}
                   </TableCell>
                 </TableRow>
               )
@@ -360,16 +514,14 @@ export const StaffCustomersPage = () => {
                 const isSelf = (u.uid || u.id) === currentStaffUser?.uid;
                 // Missing accountStatus is treated as active (matches the badge + toggle logic)
                 const isActive = (u.accountStatus || 'active') === 'active';
-                // Operator roles are provisioned via the Operators page; the role API rejects 'operator'
-                const isOperator = u.role === 'operator';
                 return (
                   <TableRow key={u.id || u.uid}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700 text-xs border border-slate-200">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700 text-xs border border-slate-200">
                           {u.fullName?.charAt(0) || u.email?.charAt(0) || 'U'}
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5">
                             <span>{u.fullName || 'User'}</span>
                             {isSelf && (
@@ -378,27 +530,12 @@ export const StaffCustomersPage = () => {
                               </Badge>
                             )}
                           </div>
-                          <div className="text-xs text-slate-500">{u.email}</div>
+                          <div className="text-xs text-slate-500 break-all">{u.email}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          u.role === 'admin'
-                            ? 'destructive'
-                            : u.role === 'coordinator'
-                            ? 'info'
-                            : u.role === 'guide'
-                            ? 'success'
-                            : u.role === 'support'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                        className="capitalize font-semibold text-xs"
-                      >
-                        {u.role || 'customer'}
-                      </Badge>
+                      {renderRoleBadge(u)}
                     </TableCell>
                     <TableCell className="text-xs text-slate-600">
                       {u.phone || 'N/A'}
@@ -411,70 +548,12 @@ export const StaffCustomersPage = () => {
                         {u.accountStatus || 'active'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-400">
+                    <TableCell className="text-xs text-slate-400 whitespace-nowrap">
                       {(u.createdAt || '').substring(0, 10)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={isOperator}
-                              onClick={() => {
-                                setSelectedUserForRole(u);
-                                setNewRole(u.role || 'customer');
-                              }}
-                              className="h-8 w-8 p-0 text-slate-600 hover:text-emerald-600"
-                              aria-label={`Change role for ${u.fullName || u.email}`}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{isOperator ? 'Manage operators from the Operators page' : 'Change Role'}</TooltipContent>
-                        </Tooltip>
-                        {isSelf ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              {/* Focusable wrapper so the explanation is reachable while the button is disabled */}
-                              <span
-                                tabIndex={0}
-                                className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled
-                                  aria-label="Deactivate Account (unavailable for your own account)"
-                                  className="h-8 w-8 p-0 text-slate-600"
-                                >
-                                  <UserX className="h-4 w-4" />
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>You cannot deactivate your own administrative account.</TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => requestToggleStatus(u)}
-                                className={`h-8 w-8 p-0 ${
-                                  isActive
-                                    ? 'text-slate-600 hover:text-red-600'
-                                    : 'text-slate-600 hover:text-emerald-600'
-                                }`}
-                                aria-label={`${isActive ? 'Deactivate' : 'Reactivate'} ${u.fullName || u.email}`}
-                              >
-                                {isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>{isActive ? 'Deactivate Account' : 'Reactivate Account'}</TooltipContent>
-                          </Tooltip>
-                        )}
+                        {renderUserActions(u)}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -483,6 +562,7 @@ export const StaffCustomersPage = () => {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Create Staff Account Modal */}
@@ -549,7 +629,7 @@ export const StaffCustomersPage = () => {
               <FieldError id="staff-password-error">{formErrors.password}</FieldError>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="staff-role" className="text-xs font-semibold">
                   Assigned Staff Role *

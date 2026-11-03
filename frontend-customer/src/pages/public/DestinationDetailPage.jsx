@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 const DestinationDetailSkeleton = () => (
-  <LoadingRegion label="Loading destination details" className="min-h-screen bg-slate-50 py-10">
+  <LoadingRegion label="Loading destination details" className="min-h-screen bg-slate-50 py-6 sm:py-10">
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl" aria-hidden="true">
       <Skeleton className="h-4 w-44 mb-6" />
 
@@ -35,19 +35,19 @@ const DestinationDetailSkeleton = () => (
           <Skeleton className="h-10 sm:h-12 w-3/4 max-w-md" />
           <Skeleton className="mt-3 h-4 w-56" />
         </div>
-        <Skeleton className="h-20 w-60 rounded-2xl shrink-0" />
+        <Skeleton className="h-20 w-full sm:w-60 rounded-2xl shrink-0" />
       </div>
 
       {/* Image gallery */}
-      <Skeleton className="mb-12 h-96 sm:h-[480px] w-full rounded-2xl" />
+      <Skeleton className="mb-8 lg:mb-12 h-56 sm:h-80 lg:h-[480px] w-full rounded-2xl" />
 
       {/* Description + map / sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-14">
-        <div className="lg:col-span-2 space-y-8">
-          <CardSkeleton lines={5} className="rounded-2xl p-7" />
-          <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-            <Skeleton className="h-6 w-64 mb-4" />
-            <Skeleton className="h-[380px] w-full rounded-xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 mb-10 lg:mb-14">
+        <div className="lg:col-span-2 min-w-0 space-y-8">
+          <CardSkeleton lines={5} className="rounded-2xl p-5 sm:p-7" />
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
+            <Skeleton className="h-6 w-full max-w-64 mb-4" />
+            <Skeleton className="h-[260px] sm:h-[320px] lg:h-[380px] w-full rounded-xl" />
           </div>
         </div>
         <CardSkeleton lines={5} className="rounded-2xl h-fit" />
@@ -131,7 +131,7 @@ export const DestinationDetailPage = () => {
     : ['/images/el-nido.jpg'];
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10">
+    <div className="min-h-screen bg-slate-50 py-6 sm:py-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
         {/* Back link */}
         <Link
@@ -143,19 +143,19 @@ export const DestinationDetailPage = () => {
         </Link>
 
         {/* Title & Location Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge className="bg-emerald-600 text-white font-bold text-xs">
                 {destination.category || 'Island'}
               </Badge>
               <span className="text-xs font-semibold text-slate-500">{destination.region}</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 font-heading">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 font-heading break-words">
               {destination.name}
             </h1>
-            <p className="mt-1 text-sm text-slate-600 flex items-center gap-1.5 font-medium">
-              <MapPin className="h-4 w-4 text-emerald-600" />
+            <p className="mt-1 text-sm text-slate-600 flex items-start gap-1.5 font-medium break-words">
+              <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600" />
               {[destination.location, destination.country || 'Philippines']
                 .filter((part, i, parts) => part && !(i > 0 && parts[0]?.includes(part)))
                 .join(', ')}
@@ -164,14 +164,14 @@ export const DestinationDetailPage = () => {
 
           {/* Current Live Weather Widget */}
           {weather && (
-            <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm shrink-0">
-              <img src={weather.iconUrl} alt={weather.condition} className="h-12 w-12" />
-              <div>
-                <div className="flex items-baseline gap-1">
+            <div className="flex items-center gap-3 sm:gap-4 self-start md:self-auto max-w-full rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm shrink-0">
+              <img src={weather.iconUrl} alt={weather.condition} className="h-12 w-12 shrink-0" />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-1">
                   <span className="text-2xl font-black text-slate-900 font-heading">{weather.temp}°C</span>
                   <span className="text-xs font-bold text-emerald-800">{weather.condition}</span>
                 </div>
-                <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-0.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-500 mt-0.5">
                   <span className="flex items-center gap-1">
                     <Droplets className="h-3 w-3 text-emerald-600" />
                     {weather.humidity}% humidity
@@ -187,8 +187,8 @@ export const DestinationDetailPage = () => {
         </div>
 
         {/* Image Gallery */}
-        <div className="mb-12">
-          <div className="relative h-96 sm:h-[480px] w-full overflow-hidden rounded-2xl shadow-lg border border-slate-200">
+        <div className="mb-8 lg:mb-12">
+          <div className="relative h-56 sm:h-80 lg:h-[480px] w-full overflow-hidden rounded-2xl shadow-lg border border-slate-200">
             <img
               src={images[activeImageIndex]}
               alt={destination.name}
@@ -205,7 +205,7 @@ export const DestinationDetailPage = () => {
                   onClick={() => setActiveImageIndex(i)}
                   aria-label={`Show image ${i + 1} of ${images.length}`}
                   aria-pressed={activeImageIndex === i}
-                  className={`relative h-20 w-28 shrink-0 overflow-hidden rounded-xl border-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                  className={`relative h-16 w-24 sm:h-20 sm:w-28 shrink-0 overflow-hidden rounded-xl border-2 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     activeImageIndex === i ? 'border-emerald-600 ring-2 ring-emerald-500/30' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
@@ -217,13 +217,13 @@ export const DestinationDetailPage = () => {
         </div>
 
         {/* Description & Recommended Activities */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-14">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-              <h2 className="text-2xl font-bold text-slate-900 font-heading mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 mb-10 lg:mb-14">
+          <div className="lg:col-span-2 min-w-0 space-y-8">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-heading mb-4 break-words">
                 About {destination.name}
               </h2>
-              <p className="text-slate-700 leading-relaxed text-base whitespace-pre-line">
+              <p className="text-slate-700 leading-relaxed text-sm sm:text-base whitespace-pre-line break-words">
                 {destination.description}
               </p>
 
@@ -241,7 +241,7 @@ export const DestinationDetailPage = () => {
                         className="flex items-center gap-2.5 rounded-xl bg-slate-50 p-3 border border-slate-100 text-sm font-semibold text-slate-800"
                       >
                         <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span>{act}</span>
+                        <span className="min-w-0 break-words">{act}</span>
                       </div>
                     ))}
                   </div>
@@ -250,10 +250,10 @@ export const DestinationDetailPage = () => {
             </div>
 
             {/* Interactive Leaflet Map */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-slate-900 font-heading flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-emerald-600" />
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 mb-4">
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 font-heading flex items-center gap-2">
+                  <MapPin className="h-5 w-5 shrink-0 text-emerald-600" />
                   Interactive Map & Coordinates
                 </h3>
                 <span className="text-xs font-semibold text-slate-400">
@@ -266,37 +266,37 @@ export const DestinationDetailPage = () => {
                 coordinates={destination.coordinates}
                 destinationName={destination.name}
                 locationName={destination.location}
-                height="380px"
+                height="clamp(260px, 60vw, 380px)"
               />
             </div>
           </div>
 
           {/* Sidebar Travel Summary */}
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="min-w-0 space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
               <h3 className="text-lg font-bold text-slate-900 font-heading mb-4">
                 Travel Snapshot
               </h3>
               <dl className="space-y-3.5 text-sm">
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <dt className="text-slate-500 font-medium">Country</dt>
-                  <dd className="font-bold text-slate-900">{destination.country || 'Philippines'}</dd>
+                <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100">
+                  <dt className="text-slate-500 font-medium shrink-0">Country</dt>
+                  <dd className="font-bold text-slate-900 text-right min-w-0 break-words">{destination.country || 'Philippines'}</dd>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <dt className="text-slate-500 font-medium">Region</dt>
-                  <dd className="font-bold text-slate-900">{destination.region}</dd>
+                <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100">
+                  <dt className="text-slate-500 font-medium shrink-0">Region</dt>
+                  <dd className="font-bold text-slate-900 text-right min-w-0 break-words">{destination.region}</dd>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <dt className="text-slate-500 font-medium">Category</dt>
-                  <dd className="font-bold text-emerald-700">{destination.category || 'Island'}</dd>
+                <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100">
+                  <dt className="text-slate-500 font-medium shrink-0">Category</dt>
+                  <dd className="font-bold text-emerald-700 text-right min-w-0 break-words">{destination.category || 'Island'}</dd>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <dt className="text-slate-500 font-medium">Currency</dt>
-                  <dd className="font-bold text-slate-900">Philippine Peso (PHP)</dd>
+                <div className="flex justify-between gap-4 py-1.5 border-b border-slate-100">
+                  <dt className="text-slate-500 font-medium shrink-0">Currency</dt>
+                  <dd className="font-bold text-slate-900 text-right min-w-0 break-words">Philippine Peso (PHP)</dd>
                 </div>
-                <div className="flex justify-between py-1.5">
-                  <dt className="text-slate-500 font-medium">Related Tours</dt>
-                  <dd className="font-bold text-slate-900">{destination.relatedPackages?.length || 0} {destination.relatedPackages?.length === 1 ? 'Tour' : 'Tours'} Available</dd>
+                <div className="flex justify-between gap-4 py-1.5">
+                  <dt className="text-slate-500 font-medium shrink-0">Related Tours</dt>
+                  <dd className="font-bold text-slate-900 text-right min-w-0 break-words">{destination.relatedPackages?.length || 0} {destination.relatedPackages?.length === 1 ? 'Tour' : 'Tours'} Available</dd>
                 </div>
               </dl>
             </div>
@@ -305,14 +305,14 @@ export const DestinationDetailPage = () => {
 
         {/* Related Tour Packages */}
         {destination.relatedPackages && destination.relatedPackages.length > 0 && (
-          <div className="mt-14 pt-12 border-t border-slate-200">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading mb-6">
+          <div className="mt-10 pt-8 lg:mt-14 lg:pt-12 border-t border-slate-200">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading mb-6 break-words">
               Tour Packages in {destination.name}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {destination.relatedPackages.map((pkg) => (
                 <Card key={pkg.id} className="overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-lg transition-all">
-                  <div className="h-48 overflow-hidden">
+                  <div className="h-44 sm:h-48 overflow-hidden">
                     <img
                       src={pkg.imageUrls?.[0] || '/images/el-nido.jpg'}
                       alt={pkg.name}
@@ -321,15 +321,15 @@ export const DestinationDetailPage = () => {
                   </div>
                   <CardContent className="p-5 flex flex-col justify-between">
                     <div>
-                      <h4 className="font-bold text-slate-900 text-base font-heading mb-1">{pkg.name}</h4>
+                      <h4 className="font-bold text-slate-900 text-base font-heading mb-1 break-words">{pkg.name}</h4>
                       <p className="text-xs text-slate-500 line-clamp-2">{pkg.description}</p>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <span className="text-[10px] text-slate-400 block">From</span>
                         <span className="font-extrabold text-slate-900 text-lg">{formatCurrency(pkg.pricePerPerson)}</span>
                       </div>
-                      <Button asChild size="sm" className="font-bold text-xs">
+                      <Button asChild size="sm" className="h-10 sm:h-9 font-bold text-xs">
                         <Link to={`/packages/${pkg.id}`}>View Tour</Link>
                       </Button>
                     </div>

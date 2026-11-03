@@ -178,33 +178,33 @@ export const SettingsPage = () => {
       : 'Staff Member';
 
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="w-full max-w-4xl space-y-6 sm:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Account Settings</h1>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Account Settings</h1>
         <p className="text-sm text-slate-500 mt-1">
           Manage your personal staff details, password credentials, and platform access.
         </p>
       </div>
 
       {/* User Header Profile Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+        <div className="flex min-w-0 w-full items-center gap-4 sm:w-auto">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xl border-2 border-emerald-300">
             {profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'S'}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900">{profile?.fullName || 'Staff Member'}</h2>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="min-w-0 break-words text-lg font-bold text-slate-900">{profile?.fullName || 'Staff Member'}</h2>
               <Badge variant={roleBadgeVariant} className="capitalize text-xs font-bold px-2 py-0.5">
                 {role || 'Staff'}
               </Badge>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">{profile?.email || user?.email}</p>
+            <p className="text-xs text-slate-500 mt-0.5 break-all">{profile?.email || user?.email}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 w-full sm:w-auto justify-between sm:justify-start">
+        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 w-full sm:w-auto shrink-0 justify-between sm:justify-start">
           <span className="font-medium text-slate-600">UID:</span>
           <span className="font-mono">{user?.uid ? `${user.uid.substring(0, 10)}...` : 'N/A'}</span>
           <Tooltip>
@@ -214,7 +214,7 @@ export const SettingsPage = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleCopyUid}
-                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-800"
+                className="h-9 w-9 p-0 text-slate-500 hover:text-slate-800 sm:h-6 sm:w-6"
                 aria-label="Copy full UID"
               >
                 {copiedUid ? <CheckCheck className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
@@ -225,13 +225,13 @@ export const SettingsPage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 gap-6 sm:gap-8">
         {/* Section 1: Personal Profile */}
         <Card>
           <form onSubmit={handleSaveProfile} noValidate>
             <CardHeader>
-              <div className="flex items-center gap-2 text-slate-900">
-                <User className="h-5 w-5 text-emerald-600" />
+              <div className="flex items-start gap-2 text-slate-900 sm:items-center">
+                <User className="h-5 w-5 shrink-0 text-emerald-600" />
                 <CardTitle className="text-base font-bold">Personal Profile Information</CardTitle>
               </div>
               <CardDescription>
@@ -298,8 +298,8 @@ export const SettingsPage = () => {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-700">Staff Access Role</Label>
-                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm">
-                    <Shield className="h-4 w-4 text-slate-500" />
+                  <div className="flex items-center gap-2 min-h-10 py-2 px-3 rounded-md border border-slate-200 bg-slate-50 text-slate-700 text-sm">
+                    <Shield className="h-4 w-4 shrink-0 text-slate-500" />
                     <span className="font-semibold">{roleTitle}</span>
                   </div>
                   <p className="text-[11px] text-slate-400">
@@ -344,7 +344,7 @@ export const SettingsPage = () => {
               <Button
                 type="submit"
                 disabled={savingProfile}
-                className="flex items-center gap-2"
+                className="h-10 w-full flex items-center justify-center gap-2 sm:w-auto"
               >
                 {savingProfile ? (
                   <>
@@ -366,8 +366,8 @@ export const SettingsPage = () => {
         <Card>
           <form onSubmit={handleUpdatePassword} noValidate>
             <CardHeader>
-              <div className="flex items-center gap-2 text-slate-900">
-                <KeyRound className="h-5 w-5 text-emerald-600" />
+              <div className="flex items-start gap-2 text-slate-900 sm:items-center">
+                <KeyRound className="h-5 w-5 shrink-0 text-emerald-600" />
                 <CardTitle className="text-base font-bold">Security & Password</CardTitle>
               </div>
               <CardDescription>
@@ -446,7 +446,7 @@ export const SettingsPage = () => {
               <Button
                 type="submit"
                 disabled={updatingPassword}
-                className="bg-slate-900 hover:bg-slate-800 text-white flex items-center gap-2"
+                className="h-10 w-full bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-2 sm:w-auto"
               >
                 {updatingPassword ? (
                   <>
@@ -467,8 +467,8 @@ export const SettingsPage = () => {
         {/* Section 3: Role & Permissions Overview */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2 text-slate-900">
-              <Shield className="h-5 w-5 text-emerald-600" />
+            <div className="flex items-start gap-2 text-slate-900 sm:items-center">
+              <Shield className="h-5 w-5 shrink-0 text-emerald-600" />
               <CardTitle className="text-base font-bold">Role Privileges & Permissions</CardTitle>
             </div>
             <CardDescription>
@@ -477,7 +477,7 @@ export const SettingsPage = () => {
           </CardHeader>
 
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-lg border border-slate-200 p-3 bg-slate-50/50">
                 <span className="text-xs font-bold text-slate-800">Tour Operations</span>
                 <p className="text-xs text-slate-600 mt-1">

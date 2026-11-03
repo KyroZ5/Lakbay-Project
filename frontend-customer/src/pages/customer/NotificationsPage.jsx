@@ -74,11 +74,11 @@ export const NotificationsPage = () => {
   const showSkeleton = loading && notifications.length === 0;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl min-w-0">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="mb-2 h-1.5 w-14 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-          <h1 className="text-3xl font-black text-slate-900 font-heading">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">
             Notifications Center
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -95,11 +95,11 @@ export const NotificationsPage = () => {
             <div
               key={i}
               aria-hidden="true"
-              className="flex items-start gap-3.5 p-4 rounded-xl border border-slate-200 bg-white"
+              className="flex items-start gap-3 sm:gap-3.5 p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-white"
             >
               <Skeleton className="mt-0.5 h-5 w-5 rounded-full" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-full max-w-48" />
                 <Skeleton className="h-3 w-full max-w-xl" />
                 <Skeleton className="h-3 w-2/3 max-w-md" />
                 <Skeleton className="h-2.5 w-20" />
@@ -122,24 +122,24 @@ export const NotificationsPage = () => {
           {notifications.map((n) => (
             <div
               key={n.id}
-              className={`flex items-start justify-between gap-4 p-4 rounded-xl border transition-colors ${
+              className={`flex items-start justify-between gap-2 sm:gap-4 p-3.5 sm:p-4 rounded-xl border transition-colors ${
                 n.isRead
                   ? 'bg-white border-slate-200'
                   : 'bg-emerald-50/40 border-emerald-200 shadow-sm'
               }`}
             >
-              <div className="flex items-start gap-3.5">
-                <div className="mt-0.5">{getNotificationIcon(n.type)}</div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-slate-900 text-sm">{n.title}</h4>
+              <div className="flex items-start gap-3 sm:gap-3.5 min-w-0 flex-1">
+                <div className="mt-0.5 shrink-0">{getNotificationIcon(n.type)}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h4 className="font-bold text-slate-900 text-sm break-words min-w-0">{n.title}</h4>
                     {!n.isRead && (
                       <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 h-4">
                         New
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-2xl">{n.message}</p>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-2xl break-words">{n.message}</p>
                   <span className="text-[10px] text-slate-400 mt-2 block font-medium">
                     {formatDate(n.createdAt)}
                   </span>
@@ -155,7 +155,7 @@ export const NotificationsPage = () => {
                       onClick={() => handleMarkAsRead(n.id)}
                       disabled={markingId === n.id}
                       aria-label={`Mark "${n.title}" as read`}
-                      className="h-7 w-7 shrink-0 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-100/50"
+                      className="h-9 w-9 sm:h-7 sm:w-7 -mr-1 -mt-1 sm:m-0 shrink-0 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-100/50"
                     >
                       {markingId === n.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

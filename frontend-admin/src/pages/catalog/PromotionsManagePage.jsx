@@ -214,9 +214,9 @@ export const PromotionsManagePage = () => {
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Promotions & Campaigns</h1>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Promotions & Campaigns</h1>
             <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
               Direct Discounts
             </Badge>
@@ -225,18 +225,18 @@ export const PromotionsManagePage = () => {
             Publish customer-facing promotional campaign ribbons and deal banners across the platform.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:flex-nowrap">
           <Button
             variant="outline"
             onClick={fetchPromotions}
             disabled={loading}
-            className="flex items-center gap-1.5"
+            className="h-10 flex-1 flex items-center justify-center gap-1.5 sm:flex-none"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           {canCreate && (
-            <Button onClick={openCreateModal} className="flex items-center gap-1.5">
+            <Button onClick={openCreateModal} className="h-10 flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap sm:flex-none">
               <Plus className="h-4 w-4" />
               New Campaign Banner
             </Button>
@@ -246,23 +246,151 @@ export const PromotionsManagePage = () => {
 
       {/* Search Bar */}
       <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative w-full flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search campaigns by title or tag..."
             aria-label="Search campaigns"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-white"
+            className="h-10 pl-9 bg-white"
           />
         </div>
       </div>
 
       {error && <ErrorState message={error} onRetry={fetchPromotions} retrying={loading} />}
 
-      {/* Campaign Banners Table */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-busy={loading}>
-        <Table>
+      {/* Mobile: stacked campaign cards (same data and actions as the table) */}
+      <div className="space-y-3 md:hidden" aria-busy={loading}>
+        {showSkeleton ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" aria-hidden="true">
+              <div className="flex gap-3">
+                <div className="h-16 w-24 shrink-0 animate-pulse rounded-md bg-slate-100" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 animate-pulse rounded bg-slate-100" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : filtered.length === 0 ? (
+          error ? null : (
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+              {promotions.length > 0 ? (
+                <EmptyState filtered onClearFilters={() => setSearch('')} />
+              ) : (
+                <EmptyState
+                  icon={Megaphone}
+                  title="No promotional campaigns yet"
+                  description="Create your first campaign banner to showcase special offers."
+                  action={
+                    canCreate && (
+                      <Button size="sm" onClick={openCreateModal}>
+                        <Plus className="mr-1.5 h-4 w-4" />
+                        New Campaign Banner
+                      </Button>
+                    )
+                  }
+                />
+              )}
+            </div>
+          )
+        ) : (
+          filtered.map((promo) => (
+            <div key={promo.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex gap-3">
+                {promo.imageUrl || promo.bannerImageUrl ? (
+                  <img
+                    src={promo.imageUrl || promo.bannerImageUrl}
+                    alt={promo.title}
+                    className="h-16 w-24 shrink-0 rounded-md object-cover border border-slate-200 shadow-xs"
+                  />
+                ) : (
+                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    <Megaphone className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-900 break-words">{promo.title}</div>
+                  {promo.subtitle && (
+                    <div className="text-xs text-slate-500 line-clamp-2">{promo.subtitle}</div>
+                  )}
+                </div>
+              </div>
+
+              {(promo.badgeText || promo.discountHighlight) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {promo.badgeText && (
+                    <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-[10px] font-bold">
+                      {promo.badgeText}
+                    </Badge>
+                  )}
+                  {promo.discountHighlight && (
+                    <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                      <Percent className="h-3 w-3 shrink-0" />
+                      {promo.discountHighlight}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-3">
+                <span className="inline-flex max-w-full items-center gap-1 text-xs text-slate-600 font-mono bg-slate-100 px-2 py-0.5 rounded">
+                  <span className="min-w-0 break-all">{promo.actionUrl || '/packages'}</span>
+                  <ExternalLink className="h-3 w-3 shrink-0 text-slate-400" />
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                <button
+                  type="button"
+                  onClick={() => handleTogglePublish(promo)}
+                  disabled={togglingId === promo.id}
+                  aria-label={`${promo.isPublished ? 'Unpublish' : 'Publish'} ${promo.title}`}
+                  className="flex min-h-10 cursor-pointer items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  {promo.isPublished ? (
+                    <Badge variant="success" className="flex items-center gap-1">
+                      <Check className="h-3 w-3" /> Live
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-slate-500 border-slate-300">
+                      Draft (Hidden)
+                    </Badge>
+                  )}
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openEditModal(promo)}
+                    aria-label={`Edit ${promo.title}`}
+                    className="h-10 w-10 p-0 text-slate-600 hover:text-emerald-700"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  {role === 'admin' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPromoToDelete(promo)}
+                      aria-label={`Delete ${promo.title}`}
+                      className="h-10 w-10 p-0 text-slate-400 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Campaign Banners Table (tablet and up) */}
+      <div className="hidden min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:block" aria-busy={loading}>
+        <Table className="min-w-[760px]">
           <TableHeader>
             <TableRow className="bg-slate-50/80">
               <TableHead className="w-24">Banner</TableHead>
@@ -317,7 +445,7 @@ export const PromotionsManagePage = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="font-semibold text-slate-900">{promo.title}</div>
+                    <div className="font-semibold text-slate-900 break-words">{promo.title}</div>
                     {promo.subtitle && (
                       <div className="text-xs text-slate-500 line-clamp-1">{promo.subtitle}</div>
                     )}
@@ -338,9 +466,9 @@ export const PromotionsManagePage = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-600 font-mono bg-slate-100 px-2 py-0.5 rounded">
-                      {promo.actionUrl || '/packages'}
-                      <ExternalLink className="h-3 w-3 text-slate-400" />
+                    <span className="inline-flex max-w-[16rem] items-center gap-1 text-xs text-slate-600 font-mono bg-slate-100 px-2 py-0.5 rounded">
+                      <span className="min-w-0 break-all">{promo.actionUrl || '/packages'}</span>
+                      <ExternalLink className="h-3 w-3 shrink-0 text-slate-400" />
                     </span>
                   </TableCell>
                   <TableCell>
@@ -358,7 +486,7 @@ export const PromotionsManagePage = () => {
                               <Check className="h-3 w-3" /> Live
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-slate-500 border-slate-300">
+                            <Badge variant="outline" className="whitespace-nowrap text-slate-500 border-slate-300">
                               Draft (Hidden)
                             </Badge>
                           )}
@@ -514,8 +642,9 @@ export const PromotionsManagePage = () => {
             </div>
 
             {/* Published Switch */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-start gap-3 pt-2 sm:items-center">
               <Switch
+                className="mt-0.5 shrink-0 sm:mt-0"
                 id="promo-published"
                 checked={formData.isPublished}
                 onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}

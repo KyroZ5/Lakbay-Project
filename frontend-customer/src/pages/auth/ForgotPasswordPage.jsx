@@ -40,7 +40,7 @@ export const ForgotPasswordPage = () => {
     <AuthShell>
       <div className="w-full space-y-6">
         <div className="text-center lg:text-left">
-          <h2 className="text-2xl font-extrabold text-slate-900 font-heading">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading break-words">
             Reset Your <span className="text-gradient">Password</span>
           </h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -49,11 +49,11 @@ export const ForgotPasswordPage = () => {
         </div>
 
         <Card className="rounded-2xl border-slate-200 shadow-md">
-          <CardContent className="p-8">
+          <CardContent className="p-5 sm:p-8">
             {error && (
               <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-xl bg-red-50 p-3.5 text-xs text-red-700 border border-red-200">
                 <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
-                <span>{error}</span>
+                <span className="min-w-0 break-words">{error}</span>
               </div>
             )}
 
@@ -62,9 +62,9 @@ export const ForgotPasswordPage = () => {
                 <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto mb-3" />
                 <h3 className="text-lg font-bold text-slate-900">Check Your Inbox</h3>
                 <p className="text-xs text-slate-600 mt-2">
-                  We sent a reset link to <span className="font-semibold">{email}</span>. Click the link in the email to set a new password.
+                  We sent a reset link to <span className="font-semibold break-all">{email}</span>. Click the link in the email to set a new password.
                 </p>
-                <Button asChild variant="outline" className="mt-6 text-xs font-semibold">
+                <Button asChild variant="outline" className="mt-6 h-11 sm:h-10 w-full sm:w-auto text-xs font-semibold">
                   <Link to={loginLink}>
                     <ArrowLeft className="h-4 w-4 mr-1.5" />
                     Back to Login
@@ -105,7 +105,7 @@ export const ForgotPasswordPage = () => {
                 <div className="text-center pt-2">
                   <Link
                     to={loginLink}
-                    className="inline-flex items-center text-xs font-semibold text-slate-600 hover:text-emerald-700"
+                    className="inline-flex min-h-[36px] items-center text-xs font-semibold text-slate-600 hover:text-emerald-700"
                   >
                     <ArrowLeft className="h-3.5 w-3.5 mr-1" />
                     Back to Login

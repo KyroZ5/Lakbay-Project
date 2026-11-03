@@ -74,32 +74,32 @@ export const WeatherCalendar = ({
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-6 shadow-sm">
       {/* Calendar Header with Current Weather badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-emerald-600" />
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 sm:pb-5 border-b border-slate-100">
+        <div className="flex min-w-0 items-center gap-2">
+          <CalendarIcon className="h-5 w-5 shrink-0 text-emerald-600" />
           <h3 className="font-bold text-slate-900 text-lg">{monthName}</h3>
         </div>
 
         {currentWeather && (
-          <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 border border-emerald-100 text-xs font-semibold text-emerald-800">
-            <CloudSun className="h-4 w-4 text-emerald-600" />
-            <span>Destination Live Weather: {currentWeather.temp}°C, {currentWeather.condition}</span>
+          <div className="order-last flex w-full items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-1 border border-emerald-100 text-xs font-semibold text-emerald-800 sm:order-none sm:w-auto sm:rounded-full">
+            <CloudSun className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="min-w-0">Destination Live Weather: {currentWeather.temp}°C, {currentWeather.condition}</span>
           </div>
         )}
 
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={handlePrevMonth}
-            className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Previous month"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={handleNextMonth}
-            className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Next month"
           >
             <ChevronRight className="h-5 w-5" />
@@ -108,17 +108,17 @@ export const WeatherCalendar = ({
       </div>
 
       {/* Days of week header */}
-      <div className="grid grid-cols-7 gap-2 pt-4 pb-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-4 pb-2 text-center text-[10px] sm:text-xs font-bold uppercase tracking-normal sm:tracking-wider text-slate-400">
         {weekDays.map((d) => (
           <div key={d}>{d}</div>
         ))}
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {/* Leading empty cells */}
         {Array.from({ length: firstDay }).map((_, idx) => (
-          <div key={`empty-${idx}`} className="h-24 rounded-lg bg-slate-50/50" />
+          <div key={`empty-${idx}`} className="min-h-[64px] sm:min-h-[100px] rounded-lg bg-slate-50/50" />
         ))}
 
         {/* Days of current month */}
@@ -142,7 +142,7 @@ export const WeatherCalendar = ({
                   onSelectDeparture(departure);
                 }
               }}
-              className={`min-h-[100px] rounded-xl p-2 flex flex-col justify-between transition-all border ${
+              className={`min-h-[64px] sm:min-h-[100px] min-w-0 overflow-hidden rounded-lg sm:rounded-xl p-1 sm:p-2 flex flex-col justify-between transition-all border ${
                 isSelected
                   ? 'border-emerald-600 bg-emerald-50/80 shadow-md ring-2 ring-emerald-500/20'
                   : isDeadlinePassed
@@ -153,9 +153,9 @@ export const WeatherCalendar = ({
               }`}
             >
               {/* Day Number and Weather icon */}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-x-0.5">
                 <span
-                  className={`text-xs font-bold ${
+                  className={`text-[11px] sm:text-xs font-bold ${
                     isSelected
                       ? 'text-emerald-700'
                       : isDeadlinePassed
@@ -174,8 +174,8 @@ export const WeatherCalendar = ({
                     className="flex items-center text-[10px] text-slate-600 font-semibold"
                     title={`${forecast.condition}: ${forecast.temp}°C`}
                   >
-                    <img src={forecast.iconUrl} alt={forecast.condition} className="w-5 h-5 -my-1" />
-                    <span>{Math.round(forecast.temp)}°</span>
+                    <img src={forecast.iconUrl} alt={forecast.condition} className="w-4 h-4 sm:w-5 sm:h-5 -my-1" />
+                    <span className="hidden sm:inline">{Math.round(forecast.temp)}°</span>
                   </div>
                 )}
               </div>
@@ -184,20 +184,20 @@ export const WeatherCalendar = ({
               {departure ? (
                 <div className="mt-1">
                   {isDeadlinePassed ? (
-                    <span className="rounded bg-red-100 text-red-700 border border-red-200 px-1 py-0.5 text-[9px] font-bold text-center block">
+                    <span className="rounded bg-red-100 text-red-700 border border-red-200 px-0.5 sm:px-1 py-0.5 text-[8px] sm:text-[9px] leading-tight font-bold text-center block break-words">
                       Cutoff Passed
                     </span>
                   ) : hasRemainingSlots ? (
                     <div className="flex flex-col gap-1">
-                      <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white text-center leading-tight">
-                        {departure.remainingSlots} slots
+                      <span className="rounded bg-emerald-600 px-0.5 sm:px-1.5 py-0.5 text-[10px] font-bold text-white text-center leading-tight">
+                        {departure.remainingSlots}<span className="hidden sm:inline"> slots</span>
                       </span>
                       <span className="text-[9px] text-emerald-800 font-medium text-center hidden sm:block">
                         Depart
                       </span>
                     </div>
                   ) : (
-                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 text-center block">
+                    <span className="rounded bg-slate-200 px-0.5 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-slate-600 text-center block truncate">
                       Full
                     </span>
                   )}
@@ -209,8 +209,8 @@ export const WeatherCalendar = ({
       </div>
 
       {/* Legend & Instructions */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
-        <div className="flex items-center gap-4">
+      <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-between gap-3 sm:gap-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full bg-emerald-600" />
             <span>Open Departure</span>

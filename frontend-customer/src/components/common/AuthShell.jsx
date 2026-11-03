@@ -75,7 +75,7 @@ export const AuthShell = ({ children }) => {
       </aside>
 
       {/* Form side */}
-      <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-slate-50 px-4 py-12 sm:px-6 lg:px-10">
+      <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-slate-50 px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
         <div className="pointer-events-none absolute inset-0 bg-dots opacity-70" />
         <div className="orb orb-teal -left-16 bottom-0 h-56 w-56 opacity-30" />
         <div className="relative w-full max-w-md">

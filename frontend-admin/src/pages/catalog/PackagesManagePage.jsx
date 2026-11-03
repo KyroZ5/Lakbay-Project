@@ -35,6 +35,7 @@ import { ImageUpload } from '../../components/common/ImageUpload';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { EmptyState, ErrorState } from '../../components/common/DataStates';
 import { TableRowsSkeleton } from '../../components/common/Skeletons';
+import { Skeleton } from '../../components/ui/skeleton';
 import { FieldError } from '../../components/common/FieldError';
 import { notify, getErrorMessage } from '../../lib/notify';
 import {
@@ -437,6 +438,135 @@ export const PackagesManagePage = () => {
     setStatusFilter('all');
   };
 
+  const renderPackageStatus = (pkg) => (
+    <>
+                      {pkg.approvalStatus === 'pending_approval' ? (
+                        <Badge className="bg-amber-100 text-amber-800 border-none font-semibold text-[10px] flex items-center gap-1 w-fit">
+                          <Clock className="h-2.5 w-2.5" /> Pending Review
+                        </Badge>
+                      ) : pkg.approvalStatus === 'rejected' ? (
+                        pkg.rejectionReason ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                tabIndex={0}
+                                className="inline-block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <Badge className="bg-red-100 text-red-800 border-none font-semibold text-[10px] flex items-center gap-1 w-fit">
+                                  <XCircle className="h-2.5 w-2.5" /> Rejected
+                                  <span className="sr-only">: {pkg.rejectionReason}</span>
+                                </Badge>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs whitespace-normal">
+                              {pkg.rejectionReason}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Badge className="bg-red-100 text-red-800 border-none font-semibold text-[10px] flex items-center gap-1 w-fit">
+                            <XCircle className="h-2.5 w-2.5" /> Rejected
+                          </Badge>
+                        )
+                      ) : role === 'operator' ? (
+                        pkg.isPublished ? (
+                          <Badge variant="success" className="flex items-center gap-1 w-fit">
+                            <Check className="h-3 w-3" /> Live
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-slate-500 border-slate-300">
+                            Draft (Hidden)
+                          </Badge>
+                        )
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePublish(pkg)}
+                              disabled={togglingId === pkg.id}
+                              aria-label={`${pkg.isPublished ? 'Unpublish' : 'Publish'} ${pkg.name}`}
+                              className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            >
+                              {pkg.isPublished ? (
+                                <Badge variant="success" className="flex items-center gap-1">
+                                  <Check className="h-3 w-3" /> Live
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-slate-500 border-slate-300">
+                                  Draft (Hidden)
+                                </Badge>
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Click to toggle publish status</TooltipContent>
+                        </Tooltip>
+                      )}
+    </>
+  );
+
+  const renderPackageActions = (pkg, className = '') => (
+                      <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+                        {/* Admin / Coordinator Approval Quick Actions */}
+                        {['admin', 'coordinator'].includes(role) && pkg.approvalStatus === 'pending_approval' && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApprovePackage(pkg)}
+                              disabled={approvingId === pkg.id}
+                              aria-label={approvingId === pkg.id ? `Approving ${pkg.name}` : `Approve ${pkg.name}`}
+                              className="h-9 md:h-7 text-[11px] gap-1"
+                            >
+                              {approvingId === pkg.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Check className="h-3 w-3" /> Approve
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setRejectModalPkg(pkg)}
+                              aria-label={`Reject ${pkg.name}`}
+                              className="h-9 md:h-7 text-[11px] text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 gap-1"
+                            >
+                              <XCircle className="h-3 w-3" /> Reject
+                            </Button>
+                          </>
+                        )}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditModal(pkg)}
+                              aria-label={`Edit ${pkg.name}`}
+                              className="h-9 w-9 md:h-8 md:w-8 p-0 text-slate-600 hover:text-emerald-600"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit package</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setPackageToDelete(pkg)}
+                              aria-label={`Delete ${pkg.name}`}
+                              className="h-9 w-9 md:h-8 md:w-8 p-0 text-slate-600 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete package</TooltipContent>
+                        </Tooltip>
+                      </div>
+  );
+
   // Skeleton only on initial load; refreshes keep the current rows visible
   const showSkeleton = loading && packages.length === 0;
 
@@ -444,8 +574,8 @@ export const PackagesManagePage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-heading">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-heading break-words">
             {role === 'operator' ? 'My Tour Packages' : 'Tour Packages Catalog'}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
@@ -454,8 +584,8 @@ export const PackagesManagePage = () => {
               : 'Manage multi-day itineraries, pricing, inclusions, and publication visibility.'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={openCreateModal} className="font-medium flex items-center gap-1.5 shadow-sm">
+        <div className="flex items-center gap-3 shrink-0">
+          <Button onClick={openCreateModal} className="w-full sm:w-auto h-10 font-medium flex items-center justify-center gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
             Create Tour Package
           </Button>
@@ -463,8 +593,8 @@ export const PackagesManagePage = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full min-w-0 lg:flex-1 lg:max-w-sm">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search package name or operator..."
@@ -476,7 +606,7 @@ export const PackagesManagePage = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger aria-label="Filter by approval status" className="w-[170px] text-slate-700">
+            <SelectTrigger aria-label="Filter by approval status" className="min-w-0 flex-1 sm:flex-none sm:w-[170px] text-slate-700">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -491,7 +621,7 @@ export const PackagesManagePage = () => {
             value={destFilter || ALL_DESTINATIONS}
             onValueChange={(v) => setDestFilter(v === ALL_DESTINATIONS ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by destination" className="w-[180px] text-slate-700">
+            <SelectTrigger aria-label="Filter by destination" className="min-w-0 flex-1 sm:flex-none sm:w-[180px] text-slate-700">
               <SelectValue placeholder="All Destinations" />
             </SelectTrigger>
             <SelectContent>
@@ -512,7 +642,7 @@ export const PackagesManagePage = () => {
                 onClick={fetchData}
                 disabled={loading}
                 aria-label="Refresh packages"
-                className="text-slate-500 hover:text-slate-800"
+                className="h-10 w-10 shrink-0 p-0 text-slate-500 hover:text-slate-800"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
@@ -526,8 +656,8 @@ export const PackagesManagePage = () => {
       {error && <ErrorState message={error} onRetry={fetchData} retrying={loading} />}
 
       {/* Packages Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
-        <Table>
+      <div className="hidden md:block min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
+        <Table className="min-w-[860px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[80px]">Preview</TableHead>
@@ -613,10 +743,10 @@ export const PackagesManagePage = () => {
                     <TableCell className="text-sm text-slate-600">
                       {dest?.name || pkg.destinationName || 'Destination'}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-600 font-medium">
+                    <TableCell className="text-sm text-slate-600 font-medium whitespace-nowrap">
                       {pkg.durationDays}D / {pkg.durationNights || 0}N
                     </TableCell>
-                    <TableCell className="text-slate-900">
+                    <TableCell className="text-slate-900 whitespace-nowrap">
                       {pkg.discountPercent > 0 ? (
                         <div>
                           <div className="font-bold text-emerald-700 flex items-center gap-1.5">
@@ -634,129 +764,10 @@ export const PackagesManagePage = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {pkg.approvalStatus === 'pending_approval' ? (
-                        <Badge className="bg-amber-100 text-amber-800 border-none font-semibold text-[10px] flex items-center gap-1 w-fit">
-                          <Clock className="h-2.5 w-2.5" /> Pending Review
-                        </Badge>
-                      ) : pkg.approvalStatus === 'rejected' ? (
-                        pkg.rejectionReason ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                tabIndex={0}
-                                className="inline-block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                <Badge className="bg-red-100 text-red-800 border-none font-semibold text-[10px] flex items-center gap-1 w-fit">
-                                  <XCircle className="h-2.5 w-2.5" /> Rejected
-                                  <span className="sr-only">: {pkg.rejectionReason}</span>
-                                </Badge>
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs whitespace-normal">
-                              {pkg.rejectionReason}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-800 border-none font-semibold text-[10px] flex items-center gap-1 w-fit">
-                            <XCircle className="h-2.5 w-2.5" /> Rejected
-                          </Badge>
-                        )
-                      ) : role === 'operator' ? (
-                        pkg.isPublished ? (
-                          <Badge variant="success" className="flex items-center gap-1 w-fit">
-                            <Check className="h-3 w-3" /> Live
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-slate-500 border-slate-300">
-                            Draft (Hidden)
-                          </Badge>
-                        )
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePublish(pkg)}
-                              disabled={togglingId === pkg.id}
-                              aria-label={`${pkg.isPublished ? 'Unpublish' : 'Publish'} ${pkg.name}`}
-                              className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                            >
-                              {pkg.isPublished ? (
-                                <Badge variant="success" className="flex items-center gap-1">
-                                  <Check className="h-3 w-3" /> Live
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-slate-500 border-slate-300">
-                                  Draft (Hidden)
-                                </Badge>
-                              )}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Click to toggle publish status</TooltipContent>
-                        </Tooltip>
-                      )}
+                      {renderPackageStatus(pkg)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* Admin / Coordinator Approval Quick Actions */}
-                        {['admin', 'coordinator'].includes(role) && pkg.approvalStatus === 'pending_approval' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprovePackage(pkg)}
-                              disabled={approvingId === pkg.id}
-                              aria-label={approvingId === pkg.id ? `Approving ${pkg.name}` : `Approve ${pkg.name}`}
-                              className="h-7 text-[11px] gap-1"
-                            >
-                              {approvingId === pkg.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <>
-                                  <Check className="h-3 w-3" /> Approve
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setRejectModalPkg(pkg)}
-                              aria-label={`Reject ${pkg.name}`}
-                              className="h-7 text-[11px] text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 gap-1"
-                            >
-                              <XCircle className="h-3 w-3" /> Reject
-                            </Button>
-                          </>
-                        )}
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditModal(pkg)}
-                              aria-label={`Edit ${pkg.name}`}
-                              className="h-8 w-8 p-0 text-slate-600 hover:text-emerald-600"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit package</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setPackageToDelete(pkg)}
-                              aria-label={`Delete ${pkg.name}`}
-                              className="h-8 w-8 p-0 text-slate-600 hover:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete package</TooltipContent>
-                        </Tooltip>
-                      </div>
+                      {renderPackageActions(pkg, 'justify-end')}
                     </TableCell>
                   </TableRow>
                 );
@@ -764,6 +775,122 @@ export const PackagesManagePage = () => {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Packages Card List (mobile) */}
+      <div className="space-y-3 md:hidden" aria-busy={loading}>
+        {showSkeleton ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} aria-hidden="true" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex gap-3">
+                <Skeleton className="h-14 w-16 shrink-0 rounded" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : filtered.length === 0 ? (
+          error ? null : (
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+              {packages.length > 0 ? (
+                <EmptyState filtered onClearFilters={clearFilters} />
+              ) : (
+                <EmptyState
+                  icon={Package}
+                  title="No tour packages yet"
+                  description={
+                    role === 'operator'
+                      ? 'Create your first tour package and submit it for compliance approval.'
+                      : 'Create your first tour package to start building the catalog.'
+                  }
+                  action={
+                    <Button size="sm" onClick={openCreateModal}>
+                      <Plus className="mr-1.5 h-4 w-4" />
+                      Create Tour Package
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+          )
+        ) : (
+          filtered.map((pkg) => {
+            const dest = destinations.find((d) => d.id === pkg.destinationId);
+            return (
+              <div key={pkg.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+                <div className="flex gap-3">
+                  {pkg.imageUrls?.[0] ? (
+                    <img
+                      src={pkg.imageUrls[0]}
+                      alt={pkg.name}
+                      className="h-14 w-16 shrink-0 rounded object-cover border border-slate-200"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-16 shrink-0 items-center justify-center rounded bg-slate-100 text-slate-400">
+                      <Package className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="min-w-0 font-semibold text-slate-900 break-words">{pkg.name}</span>
+                      {pkg.isFeatured && (
+                        <Badge variant="warning" className="text-[10px] px-1.5 py-0">
+                          Featured
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-400 break-words">
+                      {pkg.category} &bull; {pkg.cancellationCutoffDays || 7}-day refund cutoff
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-600 break-words">
+                      {dest?.name || pkg.destinationName || 'Destination'} &bull;{' '}
+                      <span className="font-medium whitespace-nowrap">
+                        {pkg.durationDays}D / {pkg.durationNights || 0}N
+                      </span>
+                    </div>
+                    {pkg.operatorName && pkg.operatorId !== 'platform' && (
+                      <div className="mt-1">
+                        <span className="inline-flex max-w-full items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                          <Building2 className="h-2.5 w-2.5 shrink-0 text-emerald-600" />
+                          <span className="truncate">{pkg.operatorName}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <div className="text-slate-900">
+                    {pkg.discountPercent > 0 ? (
+                      <div>
+                        <div className="font-bold text-emerald-700 flex items-center gap-1.5">
+                          {formatPHP(pkg.effectivePrice || pkg.discountPrice)}
+                          <span className="text-[10px] font-extrabold bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded">
+                            -{pkg.discountPercent}%
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-400 line-through">
+                          {formatPHP(pkg.pricePerPerson)}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="font-bold">{formatPHP(pkg.pricePerPerson)}</span>
+                    )}
+                    <div className="text-[10px] text-slate-400">per person</div>
+                  </div>
+                  <div>{renderPackageStatus(pkg)}</div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-3">
+                  {renderPackageActions(pkg, 'justify-end')}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Create / Edit Modal Dialog */}
@@ -845,7 +972,7 @@ export const PackagesManagePage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="pkg-price" className="text-xs font-semibold">
                   Price per Person (PHP) *
@@ -864,7 +991,7 @@ export const PackagesManagePage = () => {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-x-2">
                   <Label htmlFor="pkg-discount" className="text-xs font-semibold">
                     Discount (%)
                   </Label>
@@ -988,9 +1115,9 @@ export const PackagesManagePage = () => {
             </div>
 
             {/* Daily Itinerary Builder */}
-            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-              <div className="flex items-center justify-between">
-                <div>
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
                     Day-by-Day Itinerary Builder
                   </h4>
@@ -1003,7 +1130,7 @@ export const PackagesManagePage = () => {
                   variant="outline"
                   size="sm"
                   onClick={addDay}
-                  className="h-7 text-xs bg-white text-emerald-700 border-emerald-300"
+                  className="h-9 sm:h-7 shrink-0 self-start sm:self-auto text-xs bg-white text-emerald-700 border-emerald-300"
                 >
                   <Plus className="mr-1 h-3 w-3" /> Add Day
                 </Button>
@@ -1012,9 +1139,9 @@ export const PackagesManagePage = () => {
               <div className="space-y-4">
                 {formData.itinerary.map((day, dayIdx) => (
                   <div key={dayIdx} className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 flex-1 max-w-md">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center gap-2 flex-1 sm:max-w-md">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
                           {dayIdx + 1}
                         </span>
                         <Input
@@ -1022,16 +1149,16 @@ export const PackagesManagePage = () => {
                           value={day.dayTitle}
                           onChange={(e) => updateDayTitle(dayIdx, e.target.value)}
                           placeholder={`Day ${dayIdx + 1} Title`}
-                          className="h-8 text-xs font-semibold"
+                          className="h-9 sm:h-8 min-w-0 text-xs font-semibold"
                         />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => addActivity(dayIdx)}
-                          className="h-7 text-xs text-emerald-600 hover:text-emerald-700"
+                          className="h-9 sm:h-7 text-xs text-emerald-600 hover:text-emerald-700"
                         >
                           + Activity
                         </Button>
@@ -1041,7 +1168,7 @@ export const PackagesManagePage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => removeDay(dayIdx)}
-                            className="h-7 text-xs text-red-500 hover:text-red-700"
+                            className="h-9 sm:h-7 text-xs text-red-500 hover:text-red-700"
                           >
                             Remove Day
                           </Button>
@@ -1050,9 +1177,9 @@ export const PackagesManagePage = () => {
                     </div>
 
                     {/* Activities List */}
-                    <div className="space-y-2 pl-6 border-l-2 border-emerald-100">
+                    <div className="space-y-2 pl-3 sm:pl-6 border-l-2 border-emerald-100">
                       {(day.activities || []).map((act, actIdx) => (
-                        <div key={actIdx} className="grid grid-cols-12 gap-2 items-center">
+                        <div key={actIdx} className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-center border-b border-slate-100 pb-2 last:border-0 last:pb-0 sm:border-0 sm:pb-0">
                           <Input
                             aria-label={`Day ${dayIdx + 1} activity ${actIdx + 1} time`}
                             placeholder="09:00 AM"
@@ -1060,7 +1187,7 @@ export const PackagesManagePage = () => {
                             onChange={(e) =>
                               updateActivityField(dayIdx, actIdx, 'timeSlot', e.target.value)
                             }
-                            className="col-span-3 h-7 text-xs"
+                            className="col-span-1 sm:col-span-3 h-9 sm:h-7 min-w-0 text-xs"
                           />
                           <Input
                             aria-label={`Day ${dayIdx + 1} activity ${actIdx + 1} name`}
@@ -1069,7 +1196,7 @@ export const PackagesManagePage = () => {
                             onChange={(e) =>
                               updateActivityField(dayIdx, actIdx, 'activityName', e.target.value)
                             }
-                            className="col-span-4 h-7 text-xs"
+                            className="col-span-1 sm:col-span-4 h-9 sm:h-7 min-w-0 text-xs"
                           />
                           <Input
                             aria-label={`Day ${dayIdx + 1} activity ${actIdx + 1} location`}
@@ -1078,7 +1205,7 @@ export const PackagesManagePage = () => {
                             onChange={(e) =>
                               updateActivityField(dayIdx, actIdx, 'locationName', e.target.value)
                             }
-                            className="col-span-4 h-7 text-xs"
+                            className="col-span-1 sm:col-span-4 h-9 sm:h-7 min-w-0 text-xs"
                           />
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1088,7 +1215,7 @@ export const PackagesManagePage = () => {
                                 size="icon"
                                 onClick={() => removeActivity(dayIdx, actIdx)}
                                 aria-label={`Remove day ${dayIdx + 1} activity ${actIdx + 1}`}
-                                className="col-span-1 h-7 w-7 justify-self-center text-slate-400 hover:text-red-500"
+                                className="col-span-1 h-9 w-9 sm:h-7 sm:w-7 justify-self-end sm:justify-self-center text-slate-400 hover:text-red-500"
                               >
                                 <X className="h-3.5 w-3.5" />
                               </Button>
@@ -1114,7 +1241,7 @@ export const PackagesManagePage = () => {
 
             {/* Visibility Toggles (server-controlled for operators: approval publishes) */}
             {role !== 'operator' && (
-            <div className="flex flex-wrap items-center gap-6 pt-2">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
               <div className="flex items-center gap-2">
                 <Switch
                   id="pkg-published"

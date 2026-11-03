@@ -225,6 +225,38 @@ export const BookingsManagePage = () => {
   const hasFilters = Boolean(search || bookingStatusFilter || paymentStatusFilter || rescheduleOnlyFilter);
   const showSkeleton = loading && bookings.length === 0;
 
+  const bookingStatusVariant = (b) =>
+    b.bookingStatus === 'Confirmed'
+      ? 'success'
+      : b.bookingStatus === 'Pending'
+      ? 'warning'
+      : b.bookingStatus === 'Completed'
+      ? 'info'
+      : 'destructive';
+
+  const paymentStatusVariant = (b) =>
+    b.paymentStatus === 'Paid' ? 'outline' : b.paymentStatus === 'Refunded' ? 'secondary' : 'warning';
+
+  const renderFlagBadges = (b) => (
+    <>
+      {b.cancellationRequested && b.bookingStatus !== 'Cancelled' && (
+        <Badge variant="destructive" className="text-[9px] px-1 py-0">
+          Review Req.
+        </Badge>
+      )}
+      {b.rescheduleRequest?.status === 'pending' && (
+        <Badge className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] px-1 py-0 font-bold">
+          Reschedule Req.
+        </Badge>
+      )}
+      {b.rescheduleRequest?.status === 'approved' && (
+        <Badge variant="outline" className="text-[9px] px-1 py-0 text-slate-500">
+          Rescheduled
+        </Badge>
+      )}
+    </>
+  );
+
   const pendingRescheduleCount = bookings.filter((b) => b.rescheduleRequest?.status === 'pending').length;
 
   const filtered = bookings.filter((b) => {
@@ -240,26 +272,27 @@ export const BookingsManagePage = () => {
       b.packageName?.toLowerCase().includes(term)
     );
   });
+  const hasRows = !showSkeleton && filtered.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 break-words sm:text-2xl">
             Bookings & Reservations Hub
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Search customer reservations, audit payment statuses, reschedule departures, and manage support logs.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={fetchBookings}
             disabled={loading}
-            className="flex items-center gap-1.5 text-xs text-slate-600"
+            className="h-10 w-full flex items-center justify-center gap-1.5 text-xs text-slate-600 sm:h-9 sm:w-auto"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh Bookings
@@ -268,8 +301,8 @@ export const BookingsManagePage = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full min-w-0 lg:max-w-sm lg:flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search ref #, name, email..."
@@ -280,12 +313,12 @@ export const BookingsManagePage = () => {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
             value={bookingStatusFilter || 'all'}
             onValueChange={(v) => setBookingStatusFilter(v === 'all' ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by booking status" className="w-auto min-w-[190px] text-slate-700">
+            <SelectTrigger aria-label="Filter by booking status" className="w-full text-slate-700 sm:w-auto sm:min-w-[190px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -302,7 +335,7 @@ export const BookingsManagePage = () => {
             value={paymentStatusFilter || 'all'}
             onValueChange={(v) => setPaymentStatusFilter(v === 'all' ? '' : v)}
           >
-            <SelectTrigger aria-label="Filter by payment status" className="w-auto min-w-[190px] text-slate-700">
+            <SelectTrigger aria-label="Filter by payment status" className="w-full text-slate-700 sm:w-auto sm:min-w-[190px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -317,7 +350,7 @@ export const BookingsManagePage = () => {
             type="button"
             onClick={() => setRescheduleOnlyFilter(!rescheduleOnlyFilter)}
             aria-pressed={rescheduleOnlyFilter}
-            className={`h-10 px-3.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            className={`h-10 px-3.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               rescheduleOnlyFilter
                 ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -342,8 +375,11 @@ export const BookingsManagePage = () => {
       {error && <ErrorState message={error} onRetry={fetchBookings} retrying={loading} />}
 
       {/* Bookings Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
-        <Table>
+      <div
+        className={`min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden ${hasRows ? 'hidden md:block' : ''}`}
+        aria-busy={loading}
+      >
+        <Table className={hasRows ? 'min-w-[880px]' : ''}>
           <TableHeader>
             <TableRow>
               <TableHead>Reference & Date</TableHead>
@@ -382,7 +418,7 @@ export const BookingsManagePage = () => {
               filtered.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell>
-                    <div className="font-mono font-bold text-slate-900 text-xs">
+                    <div className="font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
                       {b.bookingReference}
                     </div>
                     <div className="text-[11px] text-slate-400">
@@ -393,13 +429,13 @@ export const BookingsManagePage = () => {
                     <div className="font-semibold text-slate-900 text-sm">
                       {b.customerName}
                     </div>
-                    <div className="text-xs text-slate-500">{b.customerEmail}</div>
+                    <div className="text-xs text-slate-500 break-all">{b.customerEmail}</div>
                   </TableCell>
                   <TableCell className="text-sm font-medium text-slate-800">
                     {b.packageName}
                   </TableCell>
                   <TableCell className="text-sm text-slate-700">
-                    <div className="flex items-center gap-1.5 font-medium">
+                    <div className="flex items-center gap-1.5 font-medium whitespace-nowrap">
                       <Calendar className="h-3.5 w-3.5 text-slate-400" />
                       {b.departureDate}
                     </div>
@@ -415,46 +451,18 @@ export const BookingsManagePage = () => {
                   <TableCell>
                     <div className="flex flex-col gap-1 items-start">
                       <Badge
-                        variant={
-                          b.bookingStatus === 'Confirmed'
-                            ? 'success'
-                            : b.bookingStatus === 'Pending'
-                            ? 'warning'
-                            : b.bookingStatus === 'Completed'
-                            ? 'info'
-                            : 'destructive'
-                        }
+                        variant={bookingStatusVariant(b)}
                         className="text-[10px] px-1.5 py-0"
                       >
                         {b.bookingStatus}
                       </Badge>
                       <Badge
-                        variant={
-                          b.paymentStatus === 'Paid'
-                            ? 'outline'
-                            : b.paymentStatus === 'Refunded'
-                            ? 'secondary'
-                            : 'warning'
-                        }
+                        variant={paymentStatusVariant(b)}
                         className="text-[10px] px-1.5 py-0 font-medium"
                       >
                         Pay: {b.paymentStatus}
                       </Badge>
-                      {b.cancellationRequested && b.bookingStatus !== 'Cancelled' && (
-                        <Badge variant="destructive" className="text-[9px] px-1 py-0">
-                          Review Req.
-                        </Badge>
-                      )}
-                      {b.rescheduleRequest?.status === 'pending' && (
-                        <Badge className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] px-1 py-0 font-bold">
-                          Reschedule Req.
-                        </Badge>
-                      )}
-                      {b.rescheduleRequest?.status === 'approved' && (
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 text-slate-500">
-                          Rescheduled
-                        </Badge>
-                      )}
+                      {renderFlagBadges(b)}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -476,6 +484,64 @@ export const BookingsManagePage = () => {
         </Table>
       </div>
 
+      {/* Mobile card list (table shown from md up) */}
+      {hasRows && (
+        <ul className="space-y-3 md:hidden" aria-busy={loading}>
+          {filtered.map((b) => (
+            <li key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-mono font-bold text-slate-900 text-xs break-all">{b.bookingReference}</div>
+                  <div className="text-[11px] text-slate-400">{(b.createdAt || '').substring(0, 10)}</div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="font-bold text-slate-900 text-sm">{formatPHP(b.totalPrice)}</div>
+                  <div className="text-xs text-slate-500">
+                    {b.numberOfTravelers} guest{b.numberOfTravelers === 1 ? '' : 's'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 min-w-0 space-y-0.5">
+                <div className="font-semibold text-slate-900 text-sm break-words">{b.customerName}</div>
+                <div className="text-xs text-slate-500 break-all">{b.customerEmail}</div>
+              </div>
+
+              <div className="mt-2 min-w-0 text-sm text-slate-700">
+                <div className="font-medium text-slate-800 break-words">{b.packageName}</div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs font-medium">
+                  <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  {b.departureDate}
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <Badge variant={bookingStatusVariant(b)} className="text-[10px] px-1.5 py-0">
+                  {b.bookingStatus}
+                </Badge>
+                <Badge variant={paymentStatusVariant(b)} className="text-[10px] px-1.5 py-0 font-medium">
+                  Pay: {b.paymentStatus}
+                </Badge>
+                {renderFlagBadges(b)}
+              </div>
+
+              <div className="mt-3 border-t border-slate-100 pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openBookingModal(b)}
+                  aria-label={`View details for booking ${b.bookingReference}`}
+                  className="h-10 w-full text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center justify-center gap-1"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Details
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {/* Booking Details & Support Hub Modal */}
       <Dialog
         open={Boolean(selectedBooking)}
@@ -484,12 +550,12 @@ export const BookingsManagePage = () => {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                  <Ticket className="h-5 w-5 text-emerald-600" />
+              <div className="min-w-0">
+                <DialogTitle className="text-lg font-bold flex items-center gap-2 break-all">
+                  <Ticket className="h-5 w-5 shrink-0 text-emerald-600" />
                   Booking {selectedBooking?.bookingReference}
                 </DialogTitle>
-                <DialogDescription className="text-xs">
+                <DialogDescription className="text-xs break-all">
                   Created on {(selectedBooking?.createdAt || '').substring(0, 10)} &bull; Customer UID: {selectedBooking?.customerId}
                 </DialogDescription>
               </div>
@@ -498,7 +564,7 @@ export const BookingsManagePage = () => {
 
           {loadingDetails ? (
             <LoadingRegion label="Loading complete booking dossier..." className="space-y-5 py-2">
-              <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4" aria-hidden="true">
+              <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:grid-cols-2" aria-hidden="true">
                 {[0, 1].map((col) => (
                   <div key={col} className="space-y-2">
                     <Skeleton className="h-3 w-32 mb-3" />
@@ -514,7 +580,7 @@ export const BookingsManagePage = () => {
                 <Skeleton className="h-14 w-full rounded-lg" />
               </div>
               <div className="space-y-4 pt-3 border-t border-slate-200" aria-hidden="true">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Skeleton className="h-9 w-full" />
                   <Skeleton className="h-9 w-full" />
                 </div>
@@ -542,9 +608,9 @@ export const BookingsManagePage = () => {
               {/* Reschedule Request Review Card */}
               {bookingDetails?.rescheduleRequest?.status === 'pending' && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="font-bold flex items-center gap-1.5 text-amber-900 text-sm">
-                      <Calendar className="h-4 w-4 text-amber-700" />
+                      <Calendar className="h-4 w-4 shrink-0 text-amber-700" />
                       Customer Requested Departure Reschedule
                     </div>
                     <Badge className="bg-amber-200 text-amber-900 text-[10px] font-bold">
@@ -552,8 +618,8 @@ export const BookingsManagePage = () => {
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 bg-white/90 rounded-lg p-3 border border-amber-200/60">
-                    <div>
+                  <div className="grid grid-cols-1 gap-3 bg-white/90 rounded-lg p-3 border border-amber-200/60 sm:grid-cols-2">
+                    <div className="min-w-0">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
                         Current Departure
                       </span>
@@ -564,7 +630,7 @@ export const BookingsManagePage = () => {
                         {bookingDetails.meetingPoint || 'Port Terminal'}
                       </p>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 block">
                         Requested Target Departure
                       </span>
@@ -578,7 +644,7 @@ export const BookingsManagePage = () => {
                   </div>
 
                   {bookingDetails.rescheduleRequest.reason && (
-                    <div className="bg-white/90 rounded-lg p-2.5 border border-amber-200/60 text-slate-700">
+                    <div className="bg-white/90 rounded-lg p-2.5 border border-amber-200/60 text-slate-700 break-words">
                       <span className="font-semibold text-slate-900">Traveler Reason: </span>
                       <span>"{bookingDetails.rescheduleRequest.reason}"</span>
                     </div>
@@ -598,14 +664,14 @@ export const BookingsManagePage = () => {
                         : `Submitted past ${bookingDetails.rescheduleRequest.cutoffDays || 7}-day cutoff (${bookingDetails.rescheduleRequest.daysRemaining} days left)`}
                     </span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
                       <Button
                         type="button"
                         size="sm"
                         variant="destructive"
                         disabled={moderatingReschedule}
                         onClick={() => openRescheduleAction('reject')}
-                        className="text-xs h-8 px-3"
+                        className="text-xs h-10 px-3 sm:h-8"
                       >
                         Reject Request
                       </Button>
@@ -614,7 +680,7 @@ export const BookingsManagePage = () => {
                         size="sm"
                         disabled={moderatingReschedule}
                         onClick={() => openRescheduleAction('approve')}
-                        className="text-xs h-8 px-3 shadow-sm font-semibold"
+                        className="text-xs h-10 px-3 shadow-sm font-semibold sm:h-8"
                       >
                         {moderatingReschedule ? 'Processing...' : 'Approve Reschedule'}
                       </Button>
@@ -624,19 +690,19 @@ export const BookingsManagePage = () => {
               )}
 
               {/* Customer and Trip Grid */}
-              <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:grid-cols-2">
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                     Customer Information
                   </h4>
-                  <div className="space-y-1 text-xs">
+                  <div className="space-y-1 text-xs break-words">
                     <div>
                       <span className="text-slate-500">Name:</span>{' '}
                       <span className="font-semibold text-slate-900">{bookingDetails?.customerName}</span>
                     </div>
                     <div>
                       <span className="text-slate-500">Email:</span>{' '}
-                      <span className="font-semibold text-slate-900">{bookingDetails?.customerEmail}</span>
+                      <span className="font-semibold text-slate-900 break-all">{bookingDetails?.customerEmail}</span>
                     </div>
                     <div>
                       <span className="text-slate-500">Phone:</span>{' '}
@@ -653,7 +719,7 @@ export const BookingsManagePage = () => {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                     Tour & Financial
                   </h4>
-                  <div className="space-y-1 text-xs">
+                  <div className="space-y-1 text-xs break-words">
                     <div>
                       <span className="text-slate-500">Tour Package:</span>{' '}
                       <span className="font-semibold text-slate-900">{bookingDetails?.packageName}</span>
@@ -684,9 +750,9 @@ export const BookingsManagePage = () => {
                     {bookingDetails.travelerManifest.map((t, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-xs"
+                        className="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 text-xs sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div>
+                        <div className="min-w-0 break-words">
                           <span className="font-bold text-slate-800">
                             {idx + 1}. {t.fullName || 'Traveler'}
                           </span>
@@ -694,9 +760,9 @@ export const BookingsManagePage = () => {
                             ({t.relationship || 'Traveler'})
                           </span>
                         </div>
-                        <div className="text-slate-500">
+                        <div className="min-w-0 text-slate-500">
                           {t.dietaryOrMedicalNotes ? (
-                            <Badge variant="outline" className="text-[10px]">
+                            <Badge variant="outline" className="max-w-full whitespace-normal break-words text-[10px]">
                               Diet: {t.dietaryOrMedicalNotes}
                             </Badge>
                           ) : (
@@ -725,13 +791,13 @@ export const BookingsManagePage = () => {
                         key={i}
                         className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs"
                       >
-                        <div className="flex items-center justify-between text-slate-400 text-[10px] mb-1">
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 text-slate-400 text-[10px] mb-1">
                           <span className="font-semibold text-slate-600">
                             {n.authorName || 'Staff'}
                           </span>
                           <span>{(n.timestamp || '').substring(0, 16).replace('T', ' ')}</span>
                         </div>
-                        <p className="text-slate-800">{n.note}</p>
+                        <p className="text-slate-800 break-words">{n.note}</p>
                       </div>
                     ))}
                   </div>
@@ -740,11 +806,11 @@ export const BookingsManagePage = () => {
 
               {/* Support Action Form: Status, Reschedule, Add Note */}
               <form onSubmit={handleSaveSupportUpdates} className="space-y-4 pt-3 border-t border-slate-200">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="booking-edit-status" className="text-xs font-semibold">Booking Status</Label>
                     <Select value={editBookingStatus} onValueChange={setEditBookingStatus}>
-                      <SelectTrigger id="booking-edit-status" className="h-9 text-xs text-slate-700">
+                      <SelectTrigger id="booking-edit-status" className="h-10 text-xs text-slate-700 sm:h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -760,7 +826,7 @@ export const BookingsManagePage = () => {
                   <div className="space-y-1.5">
                     <Label htmlFor="booking-edit-payment" className="text-xs font-semibold">Payment Status</Label>
                     <Select value={editPaymentStatus} onValueChange={setEditPaymentStatus} disabled={!canEditPayment}>
-                      <SelectTrigger id="booking-edit-payment" className="h-9 text-xs text-slate-700">
+                      <SelectTrigger id="booking-edit-payment" className="h-10 text-xs text-slate-700 sm:h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -783,7 +849,7 @@ export const BookingsManagePage = () => {
                       value={rescheduleDepId || 'keep'}
                       onValueChange={(v) => setRescheduleDepId(v === 'keep' ? '' : v)}
                     >
-                      <SelectTrigger id="booking-reschedule-dep" className="h-9 text-xs text-slate-700">
+                      <SelectTrigger id="booking-reschedule-dep" className="h-10 text-xs text-slate-700 sm:h-9">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

@@ -72,12 +72,12 @@ export const Navbar = () => {
       <div className="relative overflow-hidden bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-700 bg-[length:200%_auto] animate-gradient-x text-white">
         <div className="container mx-auto flex h-8 items-center justify-center gap-2 px-4 text-[11px] font-semibold tracking-wide sm:text-xs">
           <span className="hidden sm:inline">🎉</span>
-          <span>
+          <span className="min-w-0 truncate">
             Dry-season seats opening — book early for Palawan &amp; Visayas departures
           </span>
           <Link
             to="/packages"
-            className="hidden rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold underline-offset-2 hover:bg-white/25 hover:underline sm:inline-block"
+            className="hidden shrink-0 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold underline-offset-2 hover:bg-white/25 hover:underline sm:inline-block"
           >
             Browse tours →
           </Link>
@@ -85,15 +85,15 @@ export const Navbar = () => {
       </div>
 
       <div className="border-b border-white/40 bg-white/80 backdrop-blur-xl shadow-lg shadow-white/10">
-        <div className="container mx-auto flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto flex h-20 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2.5 transition-transform hover:scale-102">
-            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 bg-[length:200%_auto] animate-gradient-x text-white shadow-md shadow-emerald-500/30">
+          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2.5 transition-transform hover:scale-102">
+            <div className="relative flex h-10 w-10 shrink-0 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-400 bg-[length:200%_auto] animate-gradient-x text-white shadow-md shadow-emerald-500/30">
               <span className="absolute inset-0 rounded-xl ring-1 ring-white/30" />
               <Compass className="h-6 w-6 stroke-[2.2]" />
             </div>
             <div>
-              <span className="text-2xl font-black tracking-tight text-slate-900 font-heading">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 font-heading">
                 Lakbay<span className="text-gradient">.ph</span>
               </span>
               <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 -mt-1">
@@ -103,13 +103,13 @@ export const Navbar = () => {
           </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
               aria-current={isActive(link.path) ? 'page' : undefined}
-              className={`text-sm font-semibold transition-colors relative py-1 ${
+              className={`whitespace-nowrap text-sm font-semibold transition-colors relative py-1 ${
                 isActive(link.path)
                   ? 'text-emerald-600'
                   : 'text-slate-600 hover:text-slate-950'
@@ -124,7 +124,7 @@ export const Navbar = () => {
         </nav>
 
         {/* Authentication Actions */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden lg:flex shrink-0 items-center gap-3">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -197,14 +197,14 @@ export const Navbar = () => {
             variant="ghost"
             size="icon"
             onClick={() => setMobileOpen(true)}
-            className="md:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100"
+            className="lg:hidden shrink-0 rounded-lg p-2 text-slate-600 hover:bg-slate-100"
             aria-label="Open mobile navigation"
           >
             <Menu className="h-6 w-6" />
           </Button>
 
-          <SheetContent side="right" className="overflow-y-auto">
-            <SheetHeader>
+          <SheetContent side="right" className="w-[85vw] max-w-sm overflow-y-auto p-5 sm:p-6">
+            <SheetHeader className="pr-8 text-left">
               <SheetTitle>Lakbay Navigation</SheetTitle>
               <SheetDescription className="sr-only">Site navigation and account links</SheetDescription>
             </SheetHeader>
@@ -230,6 +230,15 @@ export const Navbar = () => {
             <div className="mt-8 pt-6 border-t border-slate-100">
               {user ? (
                 <div className="space-y-2">
+                  <div className="mb-2 flex items-center gap-3 rounded-xl bg-emerald-50/70 px-3 py-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">
+                      {(profile?.fullName || user.email || 'U')[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{profile?.fullName || 'Traveler'}</p>
+                      <p className="truncate text-xs text-slate-500">{user.email}</p>
+                    </div>
+                  </div>
                   <p className="px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
                     Customer Portal
                   </p>
@@ -238,7 +247,7 @@ export const Navbar = () => {
                       key={to}
                       to={to}
                       onClick={closeMobile}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      className="flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
                       <Icon className="h-4 w-4 text-emerald-600" />
                       {label}
@@ -247,7 +256,7 @@ export const Navbar = () => {
                   <Link
                     to="/become-operator"
                     onClick={closeMobile}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                    className="flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
                   >
                     <Building2 className="h-4 w-4 text-emerald-600" />
                     Become an Operator
@@ -259,7 +268,7 @@ export const Navbar = () => {
                       handleLogout();
                     }}
                     disabled={signingOut}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                   >
                     <LogOut className="h-4 w-4" />
                     Sign Out
@@ -267,10 +276,10 @@ export const Navbar = () => {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2.5">
-                  <Button asChild variant="outline" className="w-full">
+                  <Button asChild variant="outline" className="h-11 w-full">
                     <Link to="/login" onClick={closeMobile}>Log in</Link>
                   </Button>
-                  <Button asChild className="w-full">
+                  <Button asChild className="h-11 w-full">
                     <Link to="/register" onClick={closeMobile}>Create Account</Link>
                   </Button>
                 </div>

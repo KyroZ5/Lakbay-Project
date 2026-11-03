@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 /**
  * Placeholder rows rendered inside an existing <TableBody> so the real header
  * stays in place and column widths don't jump when data arrives.
- * `columns` may be a number or an array of per-column skeleton widths (Tailwind classes).
+ * `columns` may be a number or an array of per-column skeleton widths (Tailwind classes),
+ * or `{ className, cellClassName }` objects to also style the cell (e.g. 'hidden xl:table-cell').
  */
 export const TableRowsSkeleton = ({ rows = 5, columns = 5 }) => {
   const widths = Array.isArray(columns) ? columns : Array.from({ length: columns }, () => 'w-24');
@@ -15,8 +16,8 @@ export const TableRowsSkeleton = ({ rows = 5, columns = 5 }) => {
       {Array.from({ length: rows }).map((_, r) => (
         <TableRow key={r} aria-hidden="true" className="hover:bg-transparent">
           {widths.map((w, c) => (
-            <TableCell key={c}>
-              <Skeleton className={cn('h-4', w)} />
+            <TableCell key={c} className={typeof w === 'object' ? w.cellClassName : undefined}>
+              <Skeleton className={cn('h-4', typeof w === 'object' ? w.className : w)} />
             </TableCell>
           ))}
         </TableRow>

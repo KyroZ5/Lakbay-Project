@@ -40,22 +40,22 @@ const sections = [
 
 export const LegalPage = () => {
   return (
-    <div className="min-h-screen bg-slate-50 py-16">
+    <div className="min-h-screen bg-slate-50 py-10 sm:py-16">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
-        <div className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl shadow-slate-300/60">
+        <div className="relative mb-8 sm:mb-12 overflow-hidden rounded-2xl sm:rounded-3xl bg-slate-900 text-white shadow-2xl shadow-slate-300/60">
           <img src="/images/coast.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-30" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/85 to-slate-900/40" />
-          <div className="relative px-6 py-12 sm:px-12 text-center max-w-2xl mx-auto">
+          <div className="relative px-5 py-10 sm:px-12 sm:py-12 text-center max-w-2xl mx-auto">
             <Badge className="bg-emerald-500/25 text-emerald-300 border-emerald-500/30 font-semibold mb-3 px-3 py-1">
               Legal
             </Badge>
-            <h1 className="text-4xl sm:text-5xl font-extrabold font-heading">Policies</h1>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-heading">Policies</h1>
             <p className="mt-3 text-slate-300 text-sm">
               How Lakbay handles your data, bookings, and browser storage.
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs font-bold">
               {sections.map((s) => (
-                <a key={s.id} href={`#${s.id}`} className="rounded-full border border-white/25 bg-white/10 px-3 py-1 backdrop-blur-sm hover:bg-white/20">
+                <a key={s.id} href={`#${s.id}`} className="inline-flex min-h-[36px] items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 backdrop-blur-sm hover:bg-white/20">
                   {s.title}
                 </a>
               ))}
@@ -63,15 +63,15 @@ export const LegalPage = () => {
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-5 sm:space-y-8">
           {sections.map(({ id, icon: Icon, title, paragraphs }) => (
             <section
               key={id}
               id={id}
-              className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg shadow-slate-200/50"
+              className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 shadow-lg shadow-slate-200/50"
             >
-              <h2 className="flex items-center gap-2 text-2xl font-bold text-slate-900 font-heading">
-                <Icon className="h-6 w-6 text-emerald-600" />
+              <h2 className="flex items-center gap-2 text-xl sm:text-2xl font-bold text-slate-900 font-heading">
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6 shrink-0 text-emerald-600" />
                 {title}
               </h2>
               <div className="mt-4 space-y-3 text-sm text-slate-600 leading-relaxed">
